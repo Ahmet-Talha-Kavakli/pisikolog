@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lyra — Seni Anlayan Yapay Zeka</title>
+  <meta name="description"
+    content="Lyra AI ile ruh sağlığın için 7/24 yanında olan bir rehber keşfet. Big Bang'den sana uzanan bir yolculuk." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Loading Screen -->
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="loader-ring"></div>
+      <div class="loader-text">
+        <span class="loader-title">LYRA</span>
+        <span class="loader-subtitle">Deneyim Yükleniyor</span>
+        <div class="loader-bar">
+          <div class="loader-bar-fill" id="loaderBarFill"></div>
+        </div>
+        <span class="loader-percent" id="loaderPercent">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Toggle -->
+  <button id="audioToggle" class="audio-toggle" aria-label="Sesi Aç/Kapat">
+    <svg class="audio-icon audio-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+    <svg class="audio-icon audio-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      style="display:none">
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  </button>
+
+  <!-- Scroll Progress -->
+  <div id="scrollProgress" class="scroll-progress"></div>
+
+  <!-- Act Indicator -->
+  <div id="actIndicator" class="act-indicator"></div>
+
+  <!-- Three.js Canvas Container -->
+  <div id="canvasContainer"></div>
+
+  <!-- Cinematic Text Overlays -->
+  <div id="textOverlay" class="text-overlay"></div>
+
+  <!-- Phone UI Overlay (Act 9-10) -->
+  <div id="phoneOverlay" class="phone-overlay" style="display:none">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen" id="phoneScreen"></div>
+      <div class="phone-home-bar"></div>
+    </div>
+  </div>
+
+  <!-- Scroll Spacer -->
+  <div id="scrollSpacer"></div>
+
+  <!-- Interaction Hints -->
+  <div id="interactionHint" class="interaction-hint" style="display:none">
+    <div class="hint-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" />
+        <path d="M12 16v-4M12 8h.01" />
+      </svg>
+    </div>
+    <span class="hint-text" id="hintText"></span>
+  </div>
+
+  <!-- Cinematic HUD Overlays -->
+  <div id="hudOverlay" class="hud-overlay">
+    <div class="hud-corner top-left"></div>
+    <div class="hud-corner top-right"></div>
+    <div class="hud-corner bottom-left"></div>
+    <div class="hud-corner bottom-right"></div>
+    <div class="hud-scanner"></div>
+    <div class="hud-system-data" id="hudData">
+      <div class="data-row">SYSTEM_READY</div>
+      <div class="data-row">NEURAL_ID: LYRA_01</div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
