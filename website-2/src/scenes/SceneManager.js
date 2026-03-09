@@ -26,14 +26,14 @@ export class SceneManager {
 
         // 8-Act Narrative Progression (V5.0)
         this.actRanges = {
-            1: [0.00, 0.12], // Big Bang
-            2: [0.12, 0.25], // Galaxy
-            3: [0.25, 0.38], // Saturn
-            4: [0.38, 0.50], // Earth -> Turkey
-            5: [0.50, 0.62], // Istanbul
-            6: [0.62, 0.75], // Neighborhood
-            7: [0.75, 0.88], // Home Interior (Negativity)
-            8: [0.88, 1.00]  // Lyra Reveal (Hope)
+            1: [0.00, 0.15], // Big Bang
+            2: [0.15, 0.28], // Galaxy
+            3: [0.28, 0.40], // Saturn
+            4: [0.40, 0.52], // Earth -> Turkey
+            5: [0.52, 0.65], // Istanbul
+            6: [0.65, 0.78], // Neighborhood
+            7: [0.78, 0.90], // Home Interior (Negativity)
+            8: [0.90, 1.00]  // Lyra Reveal (Hope)
         };
 
         this.actNames = {

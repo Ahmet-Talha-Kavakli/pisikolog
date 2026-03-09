@@ -32,15 +32,30 @@ export class Act9_HomeScene {
 
         // 2. Bed & Girl (Procedural Placeholder)
         const bed = new THREE.Mesh(
-            new THREE.BoxGeometry(10, 2, 18),
-            new THREE.MeshStandardMaterial({ color: 0x151525 })
+            new THREE.BoxGeometry(12, 2, 20),
+            new THREE.MeshStandardMaterial({ color: 0x151525, roughness: 0.9 })
         );
         bed.position.set(-8, -13, -10);
         this.group.add(bed);
 
+        // Clutter/Mess (Procedural)
+        for (let i = 0; i < 15; i++) {
+            const clutter = new THREE.Mesh(
+                new THREE.BoxGeometry(1 + Math.random(), 1, 1 + Math.random()),
+                new THREE.MeshStandardMaterial({ color: 0x050510 })
+            );
+            clutter.position.set(
+                (Math.random() - 0.5) * 30,
+                -14,
+                (Math.random() - 0.5) * 50
+            );
+            clutter.rotation.y = Math.random() * Math.PI;
+            this.group.add(clutter);
+        }
+
         // Simple Girl Figure
         this.girl = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(1, 4, 4, 8), new THREE.MeshStandardMaterial({ color: 0x2a2a3a }));
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(1, 4, 4, 8), new THREE.MeshStandardMaterial({ color: 0x1a1a2a }));
         body.rotation.z = Math.PI / 2;
         this.girl.add(body);
         this.girl.position.set(-8, -12, -10);
@@ -49,13 +64,21 @@ export class Act9_HomeScene {
         // 3. Negative Energy Particles
         this._initNegativeParticles();
 
-        // 4. Lights (Low Key / Anxious)
-        this.pntLight = new THREE.PointLight(0xff3344, 1.5, 30);
-        this.pntLight.position.set(0, 5, 0);
+        // 4. Lights (Anxious Room)
+        this.pntLight = new THREE.PointLight(0xff3344, 1.5, 40);
+        this.pntLight.position.set(0, 10, 0);
         this.group.add(this.pntLight);
 
+        // Flicker Light (Screen effect)
+        this.flickerLight = new THREE.PointLight(0xaaccff, 0.5, 20);
+        this.flickerLight.position.set(-5, -10, -5);
+        this.group.add(this.flickerLight);
+
         this.cameraPath = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(15, 10, 40), new THREE.Vector3(5, 2, 20), new THREE.Vector3(-6, -10, -5), new THREE.Vector3(-8, -11, -8)
+            new THREE.Vector3(15, 15, 45),
+            new THREE.Vector3(5, 5, 25),
+            new THREE.Vector3(-6, -8, -2),
+            new THREE.Vector3(-8, -11, -8)
         ]);
 
         this.initialized = true;
@@ -91,8 +114,20 @@ export class Act9_HomeScene {
         this.particles.rotation.y = time * 0.05;
         this.pntLight.intensity = 1.5 + Math.sin(time * 5.0) * 0.5 + aBoost * 5.0;
 
+        // Screen Flicker
+        this.flickerLight.intensity = (0.5 + Math.random() * 0.5) * (1.0 + aBoost * 2.0);
+
         if (this.cameraPath) {
-            this.camera.position.copy(this.cameraPath.getPointAt(progress));
+            const basePos = this.cameraPath.getPointAt(progress);
+
+            // Psychological Tremor
+            const tremor = (progress > 0.4 && progress < 0.9) ? Math.sin(time * 50.0) * 0.05 : 0;
+            this.camera.position.set(
+                basePos.x + tremor,
+                basePos.y + tremor,
+                basePos.z + tremor
+            );
+
             // Look toward the girl/phone area
             this.camera.lookAt(-8, -12, -10);
         }

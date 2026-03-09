@@ -277,8 +277,9 @@ class LyraCinematicExperience {
             3: 'saturn',
             4: 'earth',
             5: 'city',
-            6: 'negative',
-            7: 'hope',
+            6: 'space',
+            7: 'negative',
+            8: 'hope',
         };
         this.postProcessing.setPreset(presets[actNumber] || 'space');
 
@@ -290,7 +291,8 @@ class LyraCinematicExperience {
             4: 'ambient_earth',
             5: 'ambient_city',
             6: 'ambient_neighborhood',
-            7: 'ambient_lyra',
+            7: 'ambient_neighborhood',
+            8: 'ambient_lyra',
         };
         if (soundMap[actNumber]) {
             this.audio.crossfadeAmbient(soundMap[actNumber]);
