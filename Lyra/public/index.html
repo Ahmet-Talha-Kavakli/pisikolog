@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyra</title>
+    <style>
+        body {
+            background: radial-gradient(circle at 50% 50%, #0a0a1a 0%, #000000 100%);
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 50px;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            transition: all 1s ease-in-out;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .ui-overlay.hidden {
+            display: flex !important;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        .top-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            animation: fadeInDown 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        h1 {
+            font-weight: 200;
+            letter-spacing: 12px;
+            margin: 0;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff, #00d2ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            opacity: 0.9;
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+        }
+
+        .status-container {
+            background: rgba(0, 20, 40, 0.5);
+            backdrop-filter: blur(15px);
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            font-size: 13px;
+            color: #00d2ff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); }
+            to { box-shadow: 0 0 30px rgba(0, 210, 255, 0.5); }
+        }
+
+        button {
+            pointer-events: auto;
+            padding: 18px 55px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            border: 1px solid rgba(0, 210, 255, 0.5);
+            border-radius: 50px;
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.7), rgba(0, 50, 100, 0.7));
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 40px rgba(0, 210, 255, 0.2), inset 0 0 15px rgba(0,210,255,0.3);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            border-color: #00d2ff;
+            box-shadow: 0 0 60px rgba(0, 210, 255, 0.7), inset 0 0 25px rgba(0,210,255,0.6);
+            transform: translateY(-5px) scale(1.05);
+            background: linear-gradient(135deg, rgba(0, 40, 80, 0.8), rgba(0, 100, 150, 0.8));
+            color: #fff;
+        }
+
+        button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg) translateY(100%);
+            transition: transform 0.6s ease;
+        }
+        
+        button:hover::after {
+            transform: rotate(45deg) translateY(-100%);
+        }
+
+        #transcript {
+            margin: 0;
+            width: 80%;
+            max-width: 750px;
+            font-size: 20px;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.95);
+            text-align: center;
+            line-height: 1.6;
+            min-height: 2em;
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
+            background: rgba(0, 10, 20, 0.6);
+            padding: 20px 30px;
+            border-radius: 25px;
+            border: 1px solid rgba(0, 210, 255, 0.15);
+            backdrop-filter: blur(15px);
+            animation: fadeInUp 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- NEW SLIDER UI --- */
+        .selector-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+            pointer-events: auto;
+        }
+
+        .nav-arrow {
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            color: #00d2ff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-arrow:hover {
+            background: rgba(0, 210, 255, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+        }
+
+        .char-display {
+            text-align: center;
+            min-width: 250px;
+        }
+
+        #currentCharName {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            color: #fff;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
+            margin-bottom: 5px;
+        }
+
+        #currentCharDesc {
+            font-size: 13px;
+            color: #88fbff;
+            opacity: 0.7;
+            letter-spacing: 1px;
+        }
+
+        /* --- CHARACTER SELECTION UI --- */
+        .character-selector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 30px;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        .char-card {
+            background: rgba(0, 10, 20, 0.6);
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 160px;
+        }
+
+        .char-card:hover {
+            border-color: #00d2ff;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
+            transform: translateY(-10px) scale(1.05);
+            background: rgba(0, 20, 40, 0.8);
+        }
+
+        .char-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .char-desc {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .char-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            border: 2px solid rgba(0, 210, 255, 0.5);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+            background-color: rgba(0, 10, 20, 0.8);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+        }
+
+        .char-card:hover .char-avatar {
+            border-color: #fff;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.5);
+            transform: scale(1.1);
+        }
+
+        .hidden {
+            display: none !important;
+            pointer-events: none;
+        }
+
+        .step-title {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 24px;
+            font-weight: 200;
+            color: #00d2ff;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        /* 3D Model Loading Spinner */
+        #loader-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #00d2ff;
+            letter-spacing: 3px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+</head>
+
+<body>
+
+    <div id="loader-overlay" class="hidden">SİSTEMLER YÜKLENİYOR...</div>
+    <div id="canvas-container"></div>
+
+    <!-- MAIN UI -->
+    <div class="ui-overlay" id="mainUI">
+        <div class="top-section">
+            <h1>LYRA</h1>
+            
+            <div class="selector-container">
+                <div class="nav-arrow" id="prevBtn">❮</div>
+                <div class="char-display">
+                    <div id="currentCharName">Titan (Robot)</div>
+                    <div id="currentCharDesc">Sıcak, güvenilir ve sakin. Mimik kapasitesi yüksek.</div>
+                </div>
+                <div class="nav-arrow" id="nextBtn">❯</div>
+            </div>
+
+            <div class="status-container" id="status">HAFIZA BAĞLANTISI HAZIR</div>
+            <button id="talkBtn">BAŞLAT</button>
+        </div>
+        <div id="transcript">"İleri düzey nöral deformasyon aktif..."</div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import Vapi from "https://esm.sh/@vapi-ai/web";
+
+        // --- AUTH & IDENTITY ---
+        let persistentUserId = localStorage.getItem('LYRA_USER_ID');
+        if (!persistentUserId) {
+            persistentUserId = 'mahmet_' + Math.random().toString(36).substr(2, 5);
+            localStorage.setItem('LYRA_USER_ID', persistentUserId);
+        }
+
+        // --- VAPI SETUP ---
+        const VAPI_PUBLIC_KEY = "2bd1acf3-d1eb-423e-9e31-23418fe111d4";
+        const VAPI_ASSISTANT_ID = "25ef33ad-0459-4057-841f-ea222bdfa126";
+        const vapiInstance = new Vapi(VAPI_PUBLIC_KEY);
+
+        // --- UI ELEMENTS ---
+        const talkBtn = document.getElementById('talkBtn');
+        const statusEl = document.getElementById('status');
+        const transcriptEl = document.getElementById('transcript');
+        const mainUI = document.getElementById('mainUI');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const currentCharName = document.getElementById('currentCharName');
+        const currentCharDesc = document.getElementById('currentCharDesc');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        let isCallActive = false;
+        let targetVolume = 0;
+        let currentVolume = 0;
+        let fullConversation = "";
+
+        const characters = [
+            { 
+                name: "Titan (Robot)", 
+                model: "avatar.glb", 
+                desc: "Sıcak, güvenilir ve sakin. Mimik kapasitesi yüksek.", 
+                emoji: "🤖",
+                animMap: { 'Yes': 'Yes', 'No': 'No', 'Wave': 'Wave', 'Jump': 'Jump' },
+                scaleMult: 1.0
+            },
+            { 
+                name: "Kozmik Dinozor", 
+                model: "dino/scene.gltf", 
+                desc: "Tarih öncesi gücün modern uzay zırhlarıyla buluştuğu vahşi bir rehber.", 
+                emoji: "🦖",
+                animMap: { 'Yes': 'walk', 'No': 'walk', 'Wave': 'walk', 'Jump': 'walk' },
+                scaleMult: 1.4 // Dinozoru %40 daha büyük yapıyoruz
+            },
+            { 
+                name: "SüngerBob", 
+                model: "spongebob.glb", 
+                desc: "Deniz altından gelen efsanevi neşe ve terapi.", 
+                emoji: "🧽",
+                animMap: { 
+                    'Yes': 'Agreeing', 
+                    'No': 'Disagreeing', 
+                    'Wave': 'Wave', 
+                    'Jump': 'Joyful Jump',
+                    'Dance': 'Silly Dance',
+                    'Surprise': 'Surprise',
+                    'Looking': 'Looking',
+                    'Talk': 'Talk'
+                },
+                scaleMult: 1.55 // Biraz daha büyüttük
+            }
+        ];
+        let currentCharIndex = 0;
+        let isSwitching = false;
+
+        // --- THREE.JS ENGINE ---
+        let scene, camera, renderer, material;
+        let avatar, mixer, currentAction;
+        let animationsMap = {};
+        let starGeo, stars; // Starfield
+        let moonGroup, satelliteGroup, astronautGroup; // Background Objects
+        let meteors = []; // Meteor Showers!
+        const clock = new THREE.Clock();
+        const container = document.getElementById('canvas-container');
+
+        // Boş sahneyi en baştan başlat
+        function initEmptyScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.5, 8); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(5, 10, 7.5);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Platform
+            const platformGeo = new THREE.CylinderGeometry(2, 2.5, 0.2, 32);
+            const platformMat = new THREE.MeshStandardMaterial({ 
+                color: 0x050515, 
+                metalness: 0.9, 
+                roughness: 0.1,
+                emissive: 0x00d2ff,
+                emissiveIntensity: 0.2
+            });
+            const platform = new THREE.Mesh(platformGeo, platformMat);
+            platform.position.y = -1.65;
+            platform.receiveShadow = true;
+            scene.add(platform);
+
+            // Platform Glow Ring
+            const ringGeo = new THREE.TorusGeometry(2, 0.05, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = -1.55;
+            scene.add(ring);
+
+            // 1. STARFIELD (WOW Effect Background)
+            starGeo = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const starPositions = new Float32Array(starCount * 3);
+            for(let i=0; i < starCount * 3; i++) {
+                starPositions[i] = (Math.random() - 0.5) * 50;
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            const starMat = new THREE.PointsMaterial({
+                color: 0xffffff, size: 0.05, transparent: true, opacity: 0.8, sizeAttenuation: true
+            });
+            stars = new THREE.Points(starGeo, starMat);
+            scene.add(stars);
+
+            // --- BACKGROUND OBJECTS (Canlandırma) ---
+            
+            // 2. MOON (Ay)
+            const moonGeo = new THREE.SphereGeometry(3, 32, 32);
+            const moonMat = new THREE.MeshStandardMaterial({
+                color: 0xa0a0a0,
+                roughness: 1.0,
+                metalness: 0.1,
+                bumpScale: 0.02
+            });
+            const moon = new THREE.Mesh(moonGeo, moonMat);
+            moon.position.set(-15, 8, -25); // Arka sol üst
+            moon.receiveShadow = true;
+            
+            // Ay İçin Ekstra Işık (Parlaması için)
+            const moonLight = new THREE.PointLight(0xddffff, 2, 20);
+            moonLight.position.set(-12, 10, -22);
+            scene.add(moonLight);
+            
+            moonGroup = new THREE.Group();
+            moonGroup.add(moon);
+            scene.add(moonGroup);
+
+            // 3. ABSTRACT SATELLITE (Uydu)
+            satelliteGroup = new THREE.Group();
+            const satBodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
+            const satBodyMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
+            const satBody = new THREE.Mesh(satBodyGeo, satBodyMat);
+            satelliteGroup.add(satBody);
+            
+            const panelGeo = new THREE.BoxGeometry(2, 0.05, 0.8);
+            const panelMat = new THREE.MeshStandardMaterial({ color: 0x004488, metalness: 0.8, roughness: 0.3 });
+            const panel1 = new THREE.Mesh(panelGeo, panelMat);
+            panel1.position.x = 1.3;
+            satelliteGroup.add(panel1);
+            
+            const panel2 = new THREE.Mesh(panelGeo, panelMat);
+            panel2.position.x = -1.3;
+            satelliteGroup.add(panel2);
+            
+            satelliteGroup.position.set(12, 15, -15);
+            satelliteGroup.rotation.x = 0.5;
+            satelliteGroup.rotation.z = -0.3;
+            scene.add(satelliteGroup);
+
+            // 4. ABSTRACT ASTRONAUT (Uzakta sürüklenen minik astronot)
+            astronautGroup = new THREE.Group();
+            const astroBodyGeo = new THREE.BoxGeometry(0.5, 0.7, 0.4);
+            const astroMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+            const astroBody = new THREE.Mesh(astroBodyGeo, astroMat);
+            astronautGroup.add(astroBody);
+            
+            const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 0.5;
+            astronautGroup.add(head);
+            
+            astronautGroup.position.set(-8, 5, -10);
+            scene.add(astronautGroup);
+
+            // 5. METEOR SHOWERS (Gerçekçi Kayan Yıldızlar / Kuyruklu Yıldız)
+            const cometHeadGeo = new THREE.SphereGeometry(0.06, 16, 16);
+            const cometHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const cometTailGeo = new THREE.ConeGeometry(0.1, 4, 16);
+            cometTailGeo.translate(0, 2, 0); // Koni ucunu pivot noktası yap
+            const cometTailMat = new THREE.MeshBasicMaterial({ 
+                color: 0x00d2ff, 
+                transparent: true, 
+                opacity: 0.6, 
+                blending: THREE.AdditiveBlending 
+            });
+
+            for (let i = 0; i < 5; i++) {
+                let mGroup = new THREE.Group();
+                
+                let head = new THREE.Mesh(cometHeadGeo, cometHeadMat);
+                let tail = new THREE.Mesh(cometTailGeo, cometTailMat);
+                tail.rotation.x = Math.PI / 2; // Kuyruk hareket yönünün tersine baksın
+                
+                mGroup.add(head);
+                mGroup.add(tail);
+
+                // Rastgele başlangıç pozisyonları
+                mGroup.position.set(
+                    20 + Math.random() * 40,
+                    15 + Math.random() * 20,
+                    -10 - Math.random() * 20
+                );
+                
+                let sx = 0.5 + Math.random() * 0.5;
+                let sy = 0.3 + Math.random() * 0.4;
+                mGroup.userData = { speedX: sx, speedY: sy };
+                
+                // Meteorun düşüş yönüne çevir
+                let dir = new THREE.Vector3(-sx, -sy, 0).normalize();
+                mGroup.lookAt(mGroup.position.clone().add(dir));
+                
+                scene.add(mGroup);
+                meteors.push(mGroup);
+            }
+
+            animate();
+            
+            // İlk karakteri yükle
+            loadModel(characters[0].model);
+        }
+
+        function loadModel(modelUrl) {
+            return new Promise((resolve, reject) => {
+                const loader = new GLTFLoader();
+                loader.load('/' + modelUrl, (gltf) => {
+                    avatar = gltf.scene;
+                    
+                    // --- SÜNGERBOB ÇİFT KLON VE RENK TEMİZLİĞİ (ÖLÇÜMDEN ÖNCE YAPILMALI!) ---
+                    let toRemove = [];
+                    avatar.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            if (modelUrl.toLowerCase().includes('sponge')) {
+                                // 1. Gizli veya İkinci Versiyon Parçaları Tespit Et
+                                const name = child.name.toLowerCase();
+                                if (name.includes('sketch') || name.includes('variant2') || name.includes('1') || child.position.x > 5 || child.position.x < -5) {
+                                    toRemove.push(child);
+                                } else {
+                                    // Orijinal parçaysa renkleri giydir
+                                    if (!window.sbTex) {
+                                        window.sbTex = new THREE.TextureLoader().load('/spongebob_color.png');
+                                        window.sbTex.flipY = false;
+                                        window.sbTex.colorSpace = THREE.SRGBColorSpace;
+                                    }
+                                    if (child.material) {
+                                        child.material = new THREE.MeshStandardMaterial({
+                                            map: window.sbTex,
+                                            roughness: 0.6,
+                                            metalness: 0.1
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Yanlış olan parçaları sahnede boyut hesaplanmadan ÖNCE tamamen sil
+                    toRemove.forEach(c => c.removeFromParent());
+
+                    // --- KUSURSUZ OTURTMA (PERFECT GROUNDING) ALGORİTMASI ---
+                    avatar.position.set(0, 0, 0);
+                    avatar.scale.set(1, 1, 1);
+                    avatar.updateMatrixWorld(true);
+                    
+                    // Boyutları şimdi sadece ana karakter üzerinden mükemmel şekilde ölçüyoruz!
+                    let box = new THREE.Box3().setFromObject(avatar);
+                    let size = box.getSize(new THREE.Vector3());
+                    let maxDim = Math.max(size.x, size.y, size.z);
+                    
+                    const charData = characters.find(c => c.model === modelUrl) || characters[0];
+                    let baseScale = (modelUrl === "avatar.glb") ? 0.8 : (2.8 / (maxDim || 1));
+                    let targetScale = baseScale * charData.scaleMult;
+
+                    avatar.scale.set(targetScale, targetScale, targetScale);
+                    avatar.updateMatrixWorld(true);
+                    
+                    let newBox = new THREE.Box3().setFromObject(avatar);
+                    let center = newBox.getCenter(new THREE.Vector3());
+                    
+                    avatar.position.x = -center.x;
+                    avatar.position.z = -center.z;
+                    avatar.position.y = (-1.55) - newBox.min.y;
+                    
+                    // Süngerbob eksen kayması manuel düzeltme
+                    if (modelUrl.toLowerCase().includes('sponge')) {
+                        avatar.position.x = -center.x; // KUSURSUZ ORTA!
+                        avatar.position.y -= 0.1; // Çok hafif aşağı al (ayakları platforma bassın)
+                    }
+                    
+                    avatar.updateMatrixWorld(true);
+
+                    scene.add(avatar);
+
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        mixer = new THREE.AnimationMixer(avatar);
+                        animationsMap = {};
+                        gltf.animations.forEach((clip) => {
+                            animationsMap[clip.name] = mixer.clipAction(clip);
+                        });
+                        
+                        let idleName = 'Idle';
+                        if (!animationsMap['Idle'] && animationsMap['idle']) idleName = 'idle';
+                        else if (!animationsMap['Idle'] && !animationsMap['idle'] && gltf.animations.length > 0) idleName = gltf.animations[0].name;
+                        
+                        if (animationsMap[idleName]) {
+                            currentAction = animationsMap[idleName];
+                            currentAction.play();
+                            window.currentIdleName = idleName;
+                        }
+                    } else if (modelUrl.toLowerCase().includes('sponge')) {
+                        // Eğer Süngerbob animasyonsuzsa yine de bir Mikser açalım ki diğer dosyaları gömebilelim
+                        mixer = new THREE.AnimationMixer(avatar);
+                        animationsMap = {};
+                    }
+                    
+                    // --- SÜNGERBOB EKSTRA ANİMASYON YÜKLEYİCİSİ ---
+                    if (modelUrl.toLowerCase().includes('sponge')) {
+                        const extraAnimations = [
+                            { file: 'Agreeing.glb', name: 'Agreeing' },
+                            { file: 'Jump.glb', name: 'Joyful Jump' },
+                            { file: 'Waving.glb', name: 'Wave' },
+                            { file: 'Talking.glb', name: 'Talk' },
+                            { file: 'Shaking Head No.glb', name: 'Disagreeing' },
+                            { file: 'Surprised.glb', name: 'Surprise' },
+                            { file: 'Looking Around.glb', name: 'Looking' }
+                        ];
+
+                        Promise.all(extraAnimations.map(animData => {
+                            return new Promise((res) => {
+                                loader.load('/' + animData.file, (animGltf) => {
+                                    if (animGltf.animations && animGltf.animations.length > 0) {
+                                        const clip = animGltf.animations[0];
+                                        // Animasyon ismini güncelleyerek haritaya (animasyon listesine) katıyoruz
+                                        animationsMap[animData.name] = mixer.clipAction(clip);
+                                    }
+                                    res();
+                                }, undefined, (err) => {
+                                    console.log("Animasyon yüklenemedi (Dosya public klasöründe yok):", animData.file);
+                                    res(); // Hata olsa da sistemi çökertme, geç
+                                });
+                            });
+                        })).then(() => {
+                            resolve(); // Tüm dış animasyonlar da yüklenince sistemi onayla
+                        });
+                    } else {
+                        resolve(); // Süngerbob harici modeller direkt onaylansın
+                    }
+                }, undefined, (error) => {
+                    console.error("Avatar failed to load:", error);
+                    reject(error);
+                });
+            });
+        }
+
+        // --- CHARACTER SWITCHING (CLEAN & SIMPLE EFFECT) ---
+        async function switchCharacter(direction) {
+            if (isSwitching) return;
+            isSwitching = true;
+            
+            // 1. Karakteri küçült ve yok et (Clean scale down)
+            if (avatar) {
+                new TWEEN.Tween(avatar.scale)
+                    .to({ x: 0, y: 0, z: 0 }, 400)
+                    .easing(TWEEN.Easing.Back.In)
+                    .start();
+            }
+
+            setTimeout(async () => {
+                if (avatar) {
+                    scene.remove(avatar);
+                    if (mixer) mixer.stopAllAction();
+                }
+                
+                currentCharIndex += direction;
+                if (currentCharIndex < 0) currentCharIndex = characters.length - 1;
+                if (currentCharIndex >= characters.length) currentCharIndex = 0;
+                
+                const char = characters[currentCharIndex];
+                currentCharName.textContent = char.name;
+                currentCharDesc.textContent = char.desc;
+                
+                try {
+                    // loadModel KUSURSUZ ölçekleme ve hizalamayı zaten yapıyor!
+                    await loadModel(char.model);
+                    
+                    // Hesaplanan bu kusursuz hedef ölçeği aklımızda tutalım
+                    const targetScale = avatar.scale.x; 
+                    
+                    // Animasyon için modeli 0 boyutuna al (hizalaması bozulmasın diye scale set(0))
+                    avatar.scale.set(0,0,0);
+                    
+                    // Dönerek büyüme efekti (Spin & Pop)
+                    avatar.rotation.y = Math.PI; 
+                    new TWEEN.Tween(avatar.rotation)
+                        .to({ y: 0 }, 600)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .start();
+
+                    new TWEEN.Tween(avatar.scale)
+                        .to({ x: targetScale, y: targetScale, z: targetScale }, 600)
+                        .easing(TWEEN.Easing.Back.Out)
+                        .onComplete(() => {
+                            isSwitching = false;
+                            playAnimation('Wave');
+                        })
+                        .start();
+                } catch(e) {
+                    console.error("Yükleme hatası:", e);
+                    isSwitching = false;
+                }
+                
+            }, 400);
+        }
+
+        prevBtn.addEventListener('click', () => switchCharacter(-1));
+        nextBtn.addEventListener('click', () => switchCharacter(1));
+
+        // --- ANIMATION SYSTEM ---
+        function playAnimation(name, loop = false) {
+            if (!mixer) return;
+            
+            // Character specific mapping (Mixamo support)
+            const currentChar = characters[currentCharIndex];
+            if (currentChar.animMap && currentChar.animMap[name]) {
+                name = currentChar.animMap[name];
+            }
+            
+            // Fallback for naming conventions (Idle vs idle)
+            if (name === 'Idle' && !animationsMap['Idle'] && animationsMap['idle']) name = 'idle';
+            if (name === 'Idle' && !animationsMap['Idle'] && !animationsMap['idle'] && window.currentIdleName) name = window.currentIdleName;
+
+            let targetAction = animationsMap[name];
+            
+            if (!targetAction) {
+                // Konuşma/Tepki animasyonları yoksa, dinozorun 'walk' veya sadece varolan diğer animasyonlarını tetikle
+                const availableNames = Object.keys(animationsMap);
+                if(availableNames.length > 1) {
+                    // Idle (bekleme) harici bir animasyon seç
+                    const dynamicNames = availableNames.filter(n => n.toLowerCase() !== 'idle');
+                    if(dynamicNames.length > 0) {
+                        const randomAnim = dynamicNames[Math.floor(Math.random() * dynamicNames.length)];
+                        targetAction = animationsMap[randomAnim];
+                    }
+                }
+            }
+
+            if(!targetAction || currentAction === targetAction) return;
+            
+            const prevAction = currentAction;
+            currentAction = targetAction;
+            
+            if (!loop) {
+                currentAction.setLoop(THREE.LoopOnce, 1);
+                currentAction.clampWhenFinished = true;
+            } else {
+                currentAction.setLoop(THREE.LoopRepeat);
+                currentAction.clampWhenFinished = false;
+            }
+            
+            currentAction.reset();
+            currentAction.play();
+            currentAction.crossFadeFrom(prevAction, 0.5, true);
+            
+            if (!loop) {
+                mixer.addEventListener('finished', restoreIdle);
+            }
+        }
+
+        function restoreIdle(e) {
+            if (e.action === currentAction) {
+                mixer.removeEventListener('finished', restoreIdle);
+                playAnimation(window.currentIdleName || 'Idle', true);
+            }
+        }
+
+        let emotionState = 'neutral'; // 'neutral', 'sad', 'angry'
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update(); // Update Tween.js
+            const delta = clock.getDelta();
+
+            // Smooth Volume Interpolation
+            currentVolume += (targetVolume - currentVolume) * 0.15;
+
+            if (mixer) mixer.update(delta);
+
+            // Rotate starfield slowly
+            if (stars) {
+                stars.rotation.y += 0.0005;
+                stars.rotation.x += 0.0002;
+            }
+
+            // Animate Meteor Showers
+            meteors.forEach(m => {
+                m.position.x -= m.userData.speedX * (delta * 60);
+                m.position.y -= m.userData.speedY * (delta * 60);
+
+                // Ekranda iyice yok olunca tekrar başlangıca at (farklı zamanlarda düşsünler)
+                if (m.position.x < -40 || m.position.y < -10) {
+                    if (Math.random() > 0.98) { // Sürekli yağmasınlar, ihtimalle geri gelsinler
+                        m.position.set(
+                            20 + Math.random() * 40,
+                            15 + Math.random() * 20,
+                            -10 - Math.random() * 20
+                        );
+                    }
+                }
+            });
+
+            // Animate background objects
+            const elapsedTime = clock.getElapsedTime();
+            if (moonGroup) {
+                moonGroup.rotation.y += 0.001; // Ay kendi etrafında yavaşça dönsün
+                moonGroup.position.y = 8 + Math.sin(elapsedTime * 0.2) * 0.5; // Ay hafif süzülsün
+            }
+            if (satelliteGroup) {
+                satelliteGroup.rotation.y += 0.005; // Uydu modeli dönsün
+                satelliteGroup.position.x = 12 + Math.sin(elapsedTime * 0.5) * 2; // Yere paralel orbit
+                satelliteGroup.position.z = -15 + Math.cos(elapsedTime * 0.5) * 2;
+            }
+            if (astronautGroup) {
+                astronautGroup.rotation.x += 0.002;
+                astronautGroup.rotation.y += 0.003;
+                astronautGroup.position.y = 5 + Math.sin(elapsedTime * 0.3) * 1;
+                astronautGroup.position.x = -8 + Math.cos(elapsedTime * 0.1) * 0.5;
+            }
+
+            if (avatar) {
+                // Smooth rotation for a living feel
+                avatar.rotation.y = Math.sin(Date.now() * 0.001) * 0.1;
+
+                // Lip Sync using morph targets (Surprised/MouthOpen)
+                avatar.traverse((node) => {
+                    if (node.isMesh && node.morphTargetInfluences && node.morphTargetDictionary) {
+                        const targetIdx = node.morphTargetDictionary['Surprised'];
+                        const angryIdx = node.morphTargetDictionary['Angry'];
+                        const sadIdx = node.morphTargetDictionary['Sad'];
+                        
+                        // Konuşma sırasındaki temel dudak hareketi
+                        const exaggeratedVolume = currentVolume * 3.5;
+                        
+                        // Dudakları sese göre oynat
+                        if (targetIdx !== undefined) {
+                            node.morphTargetInfluences[targetIdx] += (exaggeratedVolume - node.morphTargetInfluences[targetIdx]) * 0.4;
+                        }
+                        
+                        // Şiddetli seste veya duygu durumuna göre yüz hatları
+                        let targetAngry = (emotionState === 'angry' || currentVolume > 0.4) ? 1.0 : 0.0;
+                        let targetSad = (emotionState === 'sad') ? 1.0 : 0.0;
+
+                        if (angryIdx !== undefined) {
+                            node.morphTargetInfluences[angryIdx] += (targetAngry - node.morphTargetInfluences[angryIdx]) * 0.1;
+                        }
+                        if (sadIdx !== undefined) {
+                            node.morphTargetInfluences[sadIdx] += (targetSad - node.morphTargetInfluences[sadIdx]) * 0.1;
+                        }
+                    }
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- VAPI EVENTS ---
+        vapiInstance.on('call-start', () => {
+            isCallActive = true;
+            fullConversation = "";
+            statusEl.textContent = "NÖRAL BAĞLANTI AKTİF";
+            statusEl.style.color = "#00f2fe";
+            talkBtn.textContent = "BAĞLANTIYI KES";
+            console.log('✅ Vapi call started. User:', persistentUserId);
+        });
+
+        vapiInstance.on('error', (err) => {
+            console.error('❌ Vapi Error:', err);
+        });
+
+        vapiInstance.on('call-end', async () => {
+            isCallActive = false;
+            statusEl.textContent = "SİSTEM HAZIR";
+            statusEl.style.color = "#4facfe";
+            talkBtn.textContent = "BAŞLAT";
+            targetVolume = 0;
+
+            if (fullConversation.length > 50) {
+                console.log("Memory saving to local server...");
+                try {
+                    await fetch('/save-local-memory', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
+                    });
+                } catch(e) { console.error("Memory save failed:", e); }
+            }
+        });
+
+        vapiInstance.on('volume-level', (volume) => {
+            targetVolume = volume;
+        });
+
+        vapiInstance.on('message', (message) => {
+            if (message.type === 'transcript' && message.transcriptType === 'final') {
+                transcriptEl.textContent = `"${message.transcript}"`;
+                fullConversation += message.role + ": " + message.transcript + "\n";
+                
+                // Duygu ve Animasyon Tetikleyicileri (Keyword Regex/Includes)
+                const text = message.transcript.toLowerCase();
+                
+                // Karakterin duygu durumunu belirle (Gelişmiş Beden Dili)
+                if (text.includes('kötü') || text.includes('üzgün') || text.includes('maalesef') || text.includes('zor') || text.includes('acı')) {
+                    emotionState = 'sad';
+                } else if (text.includes('kızgın') || text.includes('öfke') || text.includes('nefret') || text.includes('haksızlık')) {
+                    emotionState = 'angry';
+                } else if (text.includes('harika') || text.includes('güzel') || text.includes('teşekkür') || text.includes('evet')) {
+                    emotionState = 'neutral';
+                }
+                
+                // Hem kullanıcı (sen) hem de yapay zeka konuştuğunda animasyonları ANINDA tetikle
+                if (text.includes('evet') || text.includes('tabii') || text.includes('anladım') || text.includes('kesinlikle')) {
+                    playAnimation('Yes');
+                } else if (text.includes('hayır') || text.includes('katılmıyorum') || text.includes('yok')) {
+                    playAnimation('No');
+                } else if (text.includes('merhaba') || text.includes('selam') || text.includes('görüşmek') || text.includes('nasılsın')) {
+                    playAnimation('Wave');
+                } else if (text.includes('şaşırdım') || text.includes('vay canına') || text.includes('inanılmaz') || text.includes('yok artık') || text.includes('şok')) {
+                    playAnimation('Surprise'); // Şaşırma!
+                } else if (text.includes('bakalım') || text.includes('nerede') || text.includes('nasıl yani') || text.includes('düşüneyim') || text.includes('ilginç')) {
+                    playAnimation('Looking'); // Bakınma / Merak
+                } else if (text.includes('harika') || text.includes('süper') || text.includes('mükemmel') || text.includes('tebrikler')) {
+                    playAnimation('ThumbsUp'); // Onay!
+                } else if (text.includes('komik') || text.includes('haha') || text.includes('eğlenceli') || text.includes('zıpla')) {
+                    playAnimation('Jump'); // Mutluluk zıplaması
+                } else if (text.includes('kutlayalım') || text.includes('başardın') || text.includes('dans')) {
+                    playAnimation('Dance'); // Kutlama dansı
+                } else if (text.includes('dikkat') || text.includes('dur') || text.includes('sınır')) {
+                    playAnimation('Punch'); // Uyarı / Güçlü beden dili
+                } else {
+                    // Hiçbir anahtar kelime bulunamazsa konuşurken normal konuşma animasyonuna geç (Talk)
+                    playAnimation('Talk');
+                }
+            }
+        });
+
+        // --- HEAD TEMİZLİĞİ (Favicon hatasını sustur) ---
+        const meta = document.createElement('link');
+        meta.rel = 'icon';
+        meta.href = 'data:,';
+        document.head.appendChild(meta);
+
+        talkBtn.addEventListener('click', async () => {
+            if (!isCallActive) {
+                statusEl.textContent = "HAFIZA YÜKLENIYOR...";
+                try {
+                    const memRes = await fetch(`/memory?userId=${persistentUserId}`);
+                    const { memory } = await memRes.json();
+                    console.log("🧠 Hafıza:", memory ? "✅ Var" : "⬜ Boş (ilk seans)");
+
+                    const memoryText = memory ? memory : "Bu kullanıcıyla ilk görüşmen. Onu tanımaya çalış.";
+                    
+                    // Hafızayı değişken olarak ilet
+                    vapiInstance.start(VAPI_ASSISTANT_ID, {
+                        variableValues: { memory: memoryText }
+                    });
+                } catch (err) {
+                    console.error("❌ Hata:", err);
+                    vapiInstance.start(VAPI_ASSISTANT_ID);
+                }
+            } else {
+                vapiInstance.stop();
+            }
+        });
+
+        // Sayfa açıldığında boş uzay sahnesi & UI renderla
+        initEmptyScene();
+    </script>
+</body>
+
+</html>

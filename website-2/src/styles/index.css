@@ -50,7 +50,7 @@ body {
 #scrollSpacer {
   position: relative;
   width: 100%;
-  height: 1400vh;
+  height: 6000vh;
   z-index: 0;
   pointer-events: none;
 }
@@ -999,4 +999,60 @@ body {
   100% {
     opacity: 1;
   }
+}
+
+/* --- Neural Connect Button --- */
+.neural-connect-btn {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 16px 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(124, 111, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(124, 111, 255, 0.3);
+  border-radius: 100px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 30px rgba(124, 111, 255, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.neural-connect-btn.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.neural-connect-btn:hover {
+  background: rgba(124, 111, 255, 0.2);
+  border-color: rgba(124, 111, 255, 0.8);
+  box-shadow: 0 0 50px rgba(124, 111, 255, 0.5);
+  transform: translateX(-50%) translateY(-5px) scale(1.05);
+}
+
+.neural-connect-btn.active {
+  background: linear-gradient(135deg, rgba(124, 111, 255, 0.4), rgba(34, 211, 255, 0.4));
+  border-color: #22d3ff;
+  box-shadow: 0 0 60px rgba(34, 211, 255, 0.6);
+  animation: neonPulse 2s infinite alternate;
+}
+
+@keyframes neonPulse {
+  from { box-shadow: 0 0 40px rgba(124, 111, 255, 0.4); }
+  to { box-shadow: 0 0 80px rgba(34, 211, 255, 0.8); }
 }

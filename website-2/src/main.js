@@ -10,6 +10,7 @@ import { SceneManager } from './scenes/SceneManager.js';
 import { PostProcessingPipeline } from './utils/PostProcessing.js';
 import { TextAnimator } from './utils/TextAnimator.js';
 import { AudioManager } from './utils/AudioManager.js';
+import { VapiManager } from './utils/VapiManager.js';
 
 // Scene imports (7-act consolidated architecture)
 import { Act1_BigBang } from './scenes/Act1_BigBang.js';
@@ -20,6 +21,7 @@ import { Act7_Istanbul } from './scenes/Act7_Istanbul.js';
 import { Act8_Neighborhood } from './scenes/Act8_Neighborhood.js';
 import { Act9_HomeScene } from './scenes/Act9_HomeScene.js';
 import { Act10_LyraReveal } from './scenes/Act10_LyraReveal.js';
+import { Act11_AvatarScene } from './scenes/Act11_AvatarScene.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -92,6 +94,9 @@ class LyraCinematicExperience {
         // === AUDIO ===
         this.audio = new AudioManager();
 
+        // === VAPI (AI Voice) ===
+        this.vapi = new VapiManager();
+
         // === SCENE MANAGER (8-act architecture) ===
         this.sceneManager = new SceneManager(
             this.scene, this.camera, this.renderer, this.audio
@@ -106,6 +111,7 @@ class LyraCinematicExperience {
         this.sceneManager.registerAct(6, new Act8_Neighborhood());
         this.sceneManager.registerAct(7, new Act9_HomeScene());
         this.sceneManager.registerAct(8, new Act10_LyraReveal());
+        this.sceneManager.registerAct(9, new Act11_AvatarScene());
 
         // === 3D AUDIO REGISTRATION (V4 God-Tier) ===
         this.audio.register('ambient_bigbang', '/audio/bigbang_deep.mp3', { volume: 0.8, loop: true, spatial: true });
@@ -140,6 +146,16 @@ class LyraCinematicExperience {
                 audioBtn.classList.add('playing');
                 // Ensure context is resumed/analyser is ready
                 this.audio.initAnalyser();
+            }
+        });
+
+        // === VAPI CALL TRIGGER ===
+        const vapiBtn = document.getElementById('vapiConnect');
+        vapiBtn.addEventListener('click', () => {
+            if (this.vapi.isCallActive) {
+                this.vapi.stopCall();
+            } else {
+                this.vapi.startCall();
             }
         });
 
@@ -267,6 +283,26 @@ class LyraCinematicExperience {
             this._onActChange(actNumber);
             this._lastAct = actNumber;
         }
+
+        // Vapi Button Visibility (Act 9 only)
+        const vapiBtn = document.getElementById('vapiConnect');
+        if (vapiBtn) {
+            if (actNumber === 9) {
+                vapiBtn.classList.add('visible');
+            } else {
+                vapiBtn.classList.remove('visible');
+                if (this.vapi.isCallActive) this.vapi.stopCall();
+            }
+
+            // Update button state
+            if (this.vapi.isCallActive) {
+                vapiBtn.classList.add('active');
+                vapiBtn.textContent = 'BAĞLANTIYI KES';
+            } else {
+                vapiBtn.classList.remove('active');
+                vapiBtn.textContent = 'NÖRAL BAĞLANTI KUR';
+            }
+        }
     }
 
     _onActChange(actNumber) {
@@ -280,6 +316,7 @@ class LyraCinematicExperience {
             6: 'space',
             7: 'negative',
             8: 'hope',
+            9: 'city'
         };
         this.postProcessing.setPreset(presets[actNumber] || 'space');
 
@@ -293,6 +330,7 @@ class LyraCinematicExperience {
             6: 'ambient_neighborhood',
             7: 'ambient_neighborhood',
             8: 'ambient_lyra',
+            9: 'ambient_lyra'
         };
         if (soundMap[actNumber]) {
             this.audio.crossfadeAmbient(soundMap[actNumber]);
@@ -347,8 +385,13 @@ class LyraCinematicExperience {
         const time = this.clock.getElapsedTime();
 
         // Update scenes
+        // Get combined frequency level (Ambient + Vapi)
+        const vapiVolume = this.vapi.getVolume();
+        const ambientFreq = this.audio.getFrequencyLevel();
+        const combinedFreq = Math.max(vapiVolume, ambientFreq);
+
         const { actNumber, actName } = this.sceneManager.update(
-            this.scrollProgress, time, delta
+            this.scrollProgress, time, delta, combinedFreq
         );
 
         // Update UI

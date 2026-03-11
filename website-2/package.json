@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.170.0",
+    "@vapi-ai/web": "^2.5.2",
     "gsap": "^3.12.7",
     "howler": "^2.2.4",
-    "postprocessing": "^6.36.4"
+    "postprocessing": "^6.36.4",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "vite": "^6.1.0",

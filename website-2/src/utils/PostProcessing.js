@@ -76,14 +76,14 @@ export class PostProcessingPipeline {
     setPreset(preset) {
         let targets = {};
         switch (preset) {
-            case 'bigbang': targets = { bI: 1.5, bL: 0.2, cO: 0.0005, vD: 0.5, nO: 0.03, dof: 0, fD: 0.1 }; break;
-            case 'space': targets = { bI: 0.8, bL: 0.4, cO: 0.0001, vD: 0.4, nO: 0.015, dof: 0, fD: 0.1 }; break;
-            case 'saturn': targets = { bI: 0.6, bL: 0.45, cO: 0.0002, vD: 0.45, nO: 0.02, dof: 1.2, fD: 0.12 }; break;
-            case 'earth': targets = { bI: 0.5, bL: 0.55, cO: 0.0001, vD: 0.4, nO: 0.01, dof: 0.8, fD: 0.2 }; break;
-            case 'city': targets = { bI: 0.5, bL: 0.6, cO: 0.0002, vD: 0.5, nO: 0.03, dof: 2.0, fD: 0.15 }; break;
-            case 'negative': targets = { bI: 0.2, bL: 0.8, cO: 0.002, vD: 0.7, nO: 0.08, dof: 4.0, fD: 0.02 }; break;
-            case 'hope': targets = { bI: 2.0, bL: 0.1, cO: 0.0001, vD: 0.0, nO: 0.01, dof: 3.0, fD: 0.05 }; break;
-            default: targets = { bI: 0.5, bL: 0.5, cO: 0.0001, vD: 0.4, nO: 0.015, dof: 0, fD: 0.1 };
+            case 'bigbang': targets = { bI: 2.2, bL: 0.15, cO: 0.0012, vD: 0.6, nO: 0.04, dof: 0, fD: 0.1 }; break;
+            case 'space': targets = { bI: 1.2, bL: 0.35, cO: 0.0002, vD: 0.45, nO: 0.02, dof: 0, fD: 0.1 }; break;
+            case 'saturn': targets = { bI: 0.9, bL: 0.4, cO: 0.0003, vD: 0.5, nO: 0.025, dof: 1.5, fD: 0.12 }; break;
+            case 'earth': targets = { bI: 0.7, bL: 0.5, cO: 0.0002, vD: 0.45, nO: 0.015, dof: 1.0, fD: 0.2 }; break;
+            case 'city': targets = { bI: 0.8, bL: 0.55, cO: 0.0004, vD: 0.55, nO: 0.04, dof: 2.2, fD: 0.15 }; break;
+            case 'negative': targets = { bI: 0.3, bL: 0.75, cO: 0.003, vD: 0.8, nO: 0.1, dof: 5.0, fD: 0.02 }; break;
+            case 'hope': targets = { bI: 2.5, bL: 0.05, cO: 0.0001, vD: 0.0, nO: 0.01, dof: 4.0, fD: 0.05 }; break;
+            default: targets = { bI: 0.8, bL: 0.5, cO: 0.0002, vD: 0.4, nO: 0.02, dof: 0, fD: 0.1 };
         }
 
         import('gsap').then(({ default: gsap }) => {

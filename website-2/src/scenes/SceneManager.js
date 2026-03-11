@@ -21,25 +21,27 @@ export class SceneManager {
         // Base BG Colors per Act (Safeguard)
         this.actBackgrounds = {
             1: 0x000000, 2: 0x000005, 3: 0x010105, 4: 0x020208,
-            5: 0x050510, 6: 0x0a0a1a, 7: 0x05050a, 8: 0x080815
+            5: 0x050510, 6: 0x0a0a1a, 7: 0x05050a, 8: 0x080815,
+            9: 0x0a0a20
         };
 
         // 8-Act Narrative Progression (V5.0)
         this.actRanges = {
-            1: [0.00, 0.15], // Big Bang
-            2: [0.15, 0.28], // Galaxy
-            3: [0.28, 0.40], // Saturn
-            4: [0.40, 0.52], // Earth -> Turkey
-            5: [0.52, 0.65], // Istanbul
-            6: [0.65, 0.78], // Neighborhood
-            7: [0.78, 0.90], // Home Interior (Negativity)
-            8: [0.90, 1.00]  // Lyra Reveal (Hope)
+            1: [0.00, 0.12], // Big Bang
+            2: [0.12, 0.24], // Galaxy
+            3: [0.24, 0.36], // Saturn
+            4: [0.36, 0.48], // Earth
+            5: [0.48, 0.60], // Istanbul
+            6: [0.60, 0.72], // Neighborhood
+            7: [0.72, 0.84], // Home
+            8: [0.84, 0.94], // Lyra Reveal
+            9: [0.94, 1.00]  // AI Psychologist (Avatar)
         };
 
         this.actNames = {
             1: 'Kozmik Başlangıç', 2: 'Yıldızların Doğuşu', 3: 'Gezegenler Arası Yolculuk',
             4: 'Umut Küresi: Dünya', 5: 'Şehirlerin Işığı: İstanbul', 6: 'Bağlantı Kanalları',
-            7: 'Karanlığın İçinde: Ev', 8: 'Lyra: Geleceğin Yankısı'
+            7: 'Karanlığın İçinde: Ev', 8: 'Lyra: Geleceğin Yankısı', 9: 'AI Psikolog: Yeni Bir Başlangıç'
         };
 
         window.addEventListener('mousemove', (e) => {
@@ -60,7 +62,7 @@ export class SceneManager {
         for (const [act, [s, e]] of Object.entries(this.actRanges)) {
             if (p >= s && p < e) return parseInt(act);
         }
-        return p <= 0 ? 1 : 8;
+        return p <= 0 ? 1 : 9;
     }
 
     async activateAct(actNumber) {
@@ -69,7 +71,7 @@ export class SceneManager {
 
         try {
             // Buffer: preload current + next
-            const toPreload = [actNumber, actNumber + 1].filter(n => n >= 1 && n <= 8);
+            const toPreload = [actNumber, actNumber + 1].filter(n => n >= 1 && n <= 9);
             for (const n of toPreload) {
                 if (!this.preloadedActs.has(n) && this.acts[n]) {
                     await this.acts[n].init(this.scene, this.camera, this.renderer);
@@ -108,11 +110,11 @@ export class SceneManager {
         }
     }
 
-    update(scrollProgress, time, delta) {
+    update(scrollProgress, time, delta, freq) {
         const actNumber = this.getActForProgress(scrollProgress);
         this.activateAct(actNumber);
 
-        const freq = this.audioManager ? this.audioManager.getFrequencyLevel() : 0;
+        // freq is now passed directly from main.js (combined ambient + vapi)
 
         if (this.acts[actNumber] && this.preloadedActs.has(actNumber)) {
             const [s, e] = this.actRanges[actNumber];
