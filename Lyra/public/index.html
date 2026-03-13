@@ -319,6 +319,76 @@
             letter-spacing: 3px;
             backdrop-filter: blur(10px);
         }
+        /* --- KAMERA & DUYGU WIDGET --- */
+        #camera-widget {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #camera-toggle {
+            background: rgba(0,10,20,0.7);
+            border: 1px solid rgba(0,210,255,0.4);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            padding: 0;
+            letter-spacing: 0;
+        }
+
+        #camera-toggle:hover {
+            border-color: #00d2ff;
+            box-shadow: 0 0 20px rgba(0,210,255,0.5);
+            transform: scale(1.1);
+        }
+
+        #camera-preview {
+            width: 120px;
+            height: 90px;
+            border-radius: 12px;
+            border: 2px solid rgba(0,210,255,0.4);
+            object-fit: cover;
+            display: none;
+            box-shadow: 0 0 20px rgba(0,210,255,0.3);
+        }
+
+        #emotion-badge {
+            background: rgba(0,10,20,0.85);
+            border: 1px solid rgba(0,210,255,0.3);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #00d2ff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: none;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            min-width: 100px;
+            transition: all 0.5s ease;
+        }
+
+        #emotion-badge.active {
+            display: block;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        #camera-preview.active {
+            display: block;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
     <script type="importmap">
@@ -336,6 +406,15 @@
 
     <div id="loader-overlay" class="hidden">SİSTEMLER YÜKLENİYOR...</div>
     <div id="canvas-container"></div>
+    <!-- Kamera hidden canvas (frame yakalamak için) -->
+    <canvas id="hidden-canvas" style="display:none"></canvas>
+
+    <!-- KAMERA & DUYGU WIDGET -->
+    <div id="camera-widget">
+        <button id="camera-toggle" title="Kamera Analizi">📷</button>
+        <video id="camera-preview" autoplay muted playsinline></video>
+        <div id="emotion-badge">🔄 Analiz ediliyor...</div>
+    </div>
 
     <!-- MAIN UI -->
     <div class="ui-overlay" id="mainUI">
@@ -389,6 +468,103 @@
         let isCallActive = false;
         let targetVolume = 0;
         let currentVolume = 0;
+
+        // --- KAMERA & DUYGU ANALİZİ SİSTEMİ ---
+        let cameraStream = null;
+        let cameraActive = false;
+        let emotionInterval = null;
+        let currentEmotionState = 'sakin'; // Kameradan gelen hamsız duygu (asistana gitmek için)
+
+        const cameraToggleBtn = document.getElementById('camera-toggle');
+        const cameraPreview = document.getElementById('camera-preview');
+        const emotionBadge = document.getElementById('emotion-badge');
+        const hiddenCanvas = document.getElementById('hidden-canvas');
+
+        const EMOTION_EMOJIS = {
+            mutlu: '😊', üzgün: '😢', endişeli: '😰', korkmuş: '😨',
+            sakin: '😌', şaşırmış: '😮', sinirli: '😠', ağlamak_üzere: '😭'
+        };
+
+        async function startCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: false });
+                cameraPreview.srcObject = cameraStream;
+                cameraPreview.classList.add('active');
+                emotionBadge.classList.add('active');
+                emotionBadge.textContent = '🔄 Analiz başlıyor...';
+                cameraActive = true;
+                cameraToggleBtn.textContent = '🟢';
+                cameraToggleBtn.style.borderColor = '#00ff88';
+
+                // Her 5 saniyede bir duygu analizi yap
+                emotionInterval = setInterval(analyzeEmotion, 5000);
+                setTimeout(analyzeEmotion, 1000); // ilk analiz hemen
+            } catch (err) {
+                console.error('[KAMERA] Erişim reddedildi:', err);
+                emotionBadge.textContent = '❌ Kamera izni gerekli';
+                emotionBadge.classList.add('active');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+            cameraActive = false;
+            clearInterval(emotionInterval);
+            cameraPreview.classList.remove('active');
+            cameraPreview.srcObject = null;
+            emotionBadge.classList.remove('active');
+            cameraToggleBtn.textContent = '📷';
+            cameraToggleBtn.style.borderColor = '';
+        }
+
+        async function analyzeEmotion() {
+            if (!cameraActive || !cameraStream) return;
+            try {
+                // Analiz için çözünürlüğü düşür (Maliyet ve hız için 160x120 yeterli)
+                hiddenCanvas.width = 160;
+                hiddenCanvas.height = 120;
+                const ctx = hiddenCanvas.getContext('2d');
+                ctx.drawImage(cameraPreview, 0, 0, 160, 120);
+                const base64 = hiddenCanvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+
+                const resp = await fetch('/analyze-emotion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        imageBase64: base64,
+                        userId: persistentUserId // userId'yi gönderiyoruz
+                    })
+                });
+                const data = await resp.json();
+
+                if (data.duygu) {
+                    currentEmotionState = data.duygu;
+                    const emoji = EMOTION_EMOJIS[data.duygu] || '🔮';
+                    const confidence = data.guven ? `%${data.guven}` : '';
+                    emotionBadge.textContent = `${emoji} ${data.duygu} ${confidence}`;
+
+                    // Badge rengini duyguya göre değiştir
+                    const colorMap = {
+                        mutlu: '#00ff88', üzgün: '#4488ff', endişeli: '#ffaa00',
+                        korkmuş: '#ff4444', sakin: '#00d2ff', şaşırmış: '#ff88ff',
+                        sinirli: '#ff6600', ağlamak_üzere: '#88aaff'
+                    };
+                    emotionBadge.style.color = colorMap[data.duygu] || '#00d2ff';
+                    emotionBadge.style.borderColor = (colorMap[data.duygu] || '#00d2ff') + '66';
+
+                    console.log(`[DUYGU] ${data.duygu} (%${data.guven}) - ${data.aciklama || ''}`);
+                }
+            } catch (err) {
+                console.warn('[KAMERA ANALİZ] Hata:', err.message);
+            }
+        }
+
+        cameraToggleBtn.addEventListener('click', () => {
+            if (cameraActive) stopCamera();
+            else startCamera();
+        });
+
         let fullConversation = "";
 
         const characters = [
@@ -973,22 +1149,22 @@
         });
 
         vapiInstance.on('call-end', async () => {
-            isCallActive = false;
-            statusEl.textContent = "SİSTEM HAZIR";
-            statusEl.style.color = "#4facfe";
-            talkBtn.textContent = "BAŞLAT";
-            targetVolume = 0;
+             isCallActive = false;
+             statusEl.textContent = "SİSTEM HAZIR";
+             statusEl.style.color = "#4facfe";
+             talkBtn.textContent = "BAŞLAT";
+             targetVolume = 0;
 
-            if (fullConversation.length > 50) {
-                console.log("Memory saving to local server...");
-                try {
-                    await fetch('/save-local-memory', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
-                    });
-                } catch(e) { console.error("Memory save failed:", e); }
-            }
+             if (fullConversation.length > 50) {
+                 console.log("Memory saving to local server...");
+                 try {
+                     await fetch('/save-local-memory', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
+                     });
+                 } catch(e) { console.error("Memory save failed:", e); }
+             }
         });
 
         vapiInstance.on('volume-level', (volume) => {
@@ -996,45 +1172,55 @@
         });
 
         vapiInstance.on('message', (message) => {
-            if (message.type === 'transcript' && message.transcriptType === 'final') {
-                transcriptEl.textContent = `"${message.transcript}"`;
-                fullConversation += message.role + ": " + message.transcript + "\n";
-                
-                // Duygu ve Animasyon Tetikleyicileri (Keyword Regex/Includes)
-                const text = message.transcript.toLowerCase();
-                
-                // Karakterin duygu durumunu belirle (Gelişmiş Beden Dili)
-                if (text.includes('kötü') || text.includes('üzgün') || text.includes('maalesef') || text.includes('zor') || text.includes('acı')) {
-                    emotionState = 'sad';
-                } else if (text.includes('kızgın') || text.includes('öfke') || text.includes('nefret') || text.includes('haksızlık')) {
-                    emotionState = 'angry';
-                } else if (text.includes('harika') || text.includes('güzel') || text.includes('teşekkür') || text.includes('evet')) {
-                    emotionState = 'neutral';
+            try {
+                if (message && message.type === 'transcript' && message.transcriptType === 'final' && message.transcript) {
+                    const originalText = message.transcript;
+                    const text = originalText.toLowerCase();
+                    fullConversation += (message.role || 'unknown') + ": " + originalText + "\n";
+
+                    let cleanText = originalText;
+                    
+                    // [DUYGU:xxx] Etiketlerini Yakala (Türkçe karakter desteği ile)
+                    const emotionMatch = text.match(/\[duygu:([^\]]+)\]/);
+                    if (emotionMatch) {
+                        const tag = emotionMatch[1].trim();
+                        if (tag === 'mutlu') emotionState = 'neutral';
+                        else if (tag === 'üzgün' || tag === 'ağlamak_üzere') emotionState = 'sad';
+                        else if (tag === 'sinirli') emotionState = 'angry';
+                        
+                        // Etiketi ekrandan gizle
+                        cleanText = cleanText.replace(/\[DUYGU:[^\]]+\]/gi, '').trim();
+                    }
+                    
+                    transcriptEl.textContent = `"${cleanText}"`;
+
+                    if (text.includes('kötü') || text.includes('üzgün') || text.includes('maalesef') || text.includes('zor') || text.includes('acı')) {
+                        emotionState = 'sad';
+                    } else if (text.includes('kızgın') || text.includes('öfke') || text.includes('nefret')) {
+                        emotionState = 'angry';
+                    } else if (text.includes('harika') || text.includes('güzel') || text.includes('evet')) {
+                        emotionState = 'neutral';
+                    }
+
+                    // Animasyon Tetikleyicileri
+                    if (text.includes('[duygu:şaşırmış]') || text.includes('şaşırdım') || text.includes('inanılmaz')) {
+                        playAnimation('Surprise');
+                    } else if (text.includes('[duygu:endişeli]') || text.includes('bakalım') || text.includes('ilginç')) {
+                        playAnimation('Looking');
+                    } else if (text.includes('evet') || text.includes('tabii') || text.includes('anladım')) {
+                        playAnimation('Yes');
+                    } else if (text.includes('hayır') || text.includes('katılmıyorum') || text.includes('yok')) {
+                        playAnimation('No');
+                    } else if (text.includes('merhaba') || text.includes('selam')) {
+                        playAnimation('Wave');
+                    } else if (text.includes('dans') || text.includes('eğlenceli')) {
+                        playAnimation('Dance');
+                    } else {
+                        playAnimation('Talk');
+                    }
                 }
-                
-                // Hem kullanıcı (sen) hem de yapay zeka konuştuğunda animasyonları ANINDA tetikle
-                if (text.includes('evet') || text.includes('tabii') || text.includes('anladım') || text.includes('kesinlikle')) {
-                    playAnimation('Yes');
-                } else if (text.includes('hayır') || text.includes('katılmıyorum') || text.includes('yok')) {
-                    playAnimation('No');
-                } else if (text.includes('merhaba') || text.includes('selam') || text.includes('görüşmek') || text.includes('nasılsın')) {
-                    playAnimation('Wave');
-                } else if (text.includes('şaşırdım') || text.includes('vay canına') || text.includes('inanılmaz') || text.includes('yok artık') || text.includes('şok')) {
-                    playAnimation('Surprise'); // Şaşırma!
-                } else if (text.includes('bakalım') || text.includes('nerede') || text.includes('nasıl yani') || text.includes('düşüneyim') || text.includes('ilginç')) {
-                    playAnimation('Looking'); // Bakınma / Merak
-                } else if (text.includes('harika') || text.includes('süper') || text.includes('mükemmel') || text.includes('tebrikler')) {
-                    playAnimation('ThumbsUp'); // Onay!
-                } else if (text.includes('komik') || text.includes('haha') || text.includes('eğlenceli') || text.includes('zıpla')) {
-                    playAnimation('Jump'); // Mutluluk zıplaması
-                } else if (text.includes('kutlayalım') || text.includes('başardın') || text.includes('dans')) {
-                    playAnimation('Dance'); // Kutlama dansı
-                } else if (text.includes('dikkat') || text.includes('dur') || text.includes('sınır')) {
-                    playAnimation('Punch'); // Uyarı / Güçlü beden dili
-                } else {
-                    // Hiçbir anahtar kelime bulunamazsa konuşurken normal konuşma animasyonuna geç (Talk)
-                    playAnimation('Talk');
-                }
+            } catch (err) {
+                console.warn('⚠️ Mesaj işleme hatası:', err.message);
             }
         });
 
@@ -1054,13 +1240,16 @@
 
                     const memoryText = memory ? memory : "Bu kullanıcıyla ilk görüşmen. Onu tanımaya çalış.";
                     
-                    // Hafızayı değişken olarak ilet
+                    // Hafızayı ve userId'yi ilet
                     vapiInstance.start(VAPI_ASSISTANT_ID, {
-                        variableValues: { memory: memoryText }
+                        variableValues: { memory: memoryText },
+                        metadata: { userId: persistentUserId } // UserId'yi Vapi üzerinden server'a iletiyoruz
                     });
                 } catch (err) {
                     console.error("❌ Hata:", err);
-                    vapiInstance.start(VAPI_ASSISTANT_ID);
+                    vapiInstance.start(VAPI_ASSISTANT_ID, { 
+                        metadata: { userId: persistentUserId } 
+                    });
                 }
             } else {
                 vapiInstance.stop();

@@ -21,10 +21,13 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// --- DUYGU DURUMU TAKİBİ ---
+const userEmotions = new Map(); // userId -> { duygu, guven, timestamp }
 
 // ─── HAFIZA YÖNETİMİ ──────────────────────────────────────
 const getPersistentMemory = () => {
@@ -161,14 +164,35 @@ Maksimum 150 kelime.`
 // ─── CUSTOM LLM ENDPOINT (VAPI İÇİN BEYİN) ────────────────
 app.post('/api/chat/completions', async (req, res) => {
     try {
-        const { model, messages, temperature, max_tokens } = req.body;
+        const { messages, model, temperature, max_tokens } = req.body;
         console.log(`[CUSTOM LLM] İstek alındı! Gelen mesaj sayısı: ${messages?.length}`);
 
-        // TODO: (Faz 2) İleride burada Hume AI duygu verilerini mesaj dizisine gizli talimat olarak enjekte edeceğiz!
+        // Vapi'den userId'yi çıkarmaya çalış
+        // 1. req.body.call.customer.number (varsa)
+        // 2. req.body.call.id
+        // 3. metadata.userId (bizim gönderdiğimiz)
+        const callData = req.body.call || {};
+        const userId = callData.customer?.number || callData.id || req.body.metadata?.userId || 'common_user';
         
+        console.log(`[CUSTOM LLM] Kullanıcı ID: ${userId}`);
+        
+        const latestEmotion = userEmotions.get(userId);
+        const enrichedMessages = [...messages];
+        
+        if (latestEmotion) {
+            console.log(`[CUSTOM LLM] 🎭 Duygu Enjeksiyonu: ${latestEmotion.duygu} (%${latestEmotion.guven})`);
+            const systemIdx = enrichedMessages.findIndex(m => m.role === 'system');
+            if (systemIdx !== -1) {
+                enrichedMessages[systemIdx] = {
+                    ...enrichedMessages[systemIdx],
+                    content: enrichedMessages[systemIdx].content + `\n\n[GİZLİ DUYGU VERİSİ - Kamera Analizi]: Kullanıcı şu an ${latestEmotion.duygu} görünüyor (%${latestEmotion.guven} güven). Bu duyguyu cevaba doğal şekilde yansıt (örn: sakinse sen de sakin kal, çok korkmuşsa teselli et).`
+                };
+            }
+        }
+
         const response = await openai.chat.completions.create({
             model: model || 'gpt-4o',
-            messages: messages,
+            messages: enrichedMessages,
             stream: true,
             temperature: temperature || 0.7,
             max_tokens: max_tokens || 500,
@@ -188,6 +212,43 @@ app.post('/api/chat/completions', async (req, res) => {
     } catch (error) {
         console.error("[CUSTOM LLM] ❌ Hata:", error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ─── YÜZDEN DUYGU ANALİZİ (GPT-4o Vision) ────────────────
+app.post('/analyze-emotion', async (req, res) => {
+    try {
+        const { imageBase64, userId } = req.body;
+        if (!imageBase64) return res.json({ duygu: 'sakin', guven: 0 });
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: 'Bu yüzün duygusunu analiz et. Sadece JSON döndür: {"duygu":"mutlu|üzgün|endişeli|korkmuş|sakin|şaşırmış|sinirli","guven":80}' },
+                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: 'low' } }
+                ]
+            }],
+            max_tokens: 60
+        });
+
+        let result = { duygu: 'sakin', guven: 50 };
+        try {
+            const raw = response.choices[0].message.content.trim().replace(/```json|```/g, '');
+            result = JSON.parse(raw);
+        } catch { /* parse hatası */ }
+        
+        // Son tespiti kaydet
+        if (userId) {
+            userEmotions.set(userId, { ...result, timestamp: Date.now() });
+        }
+        
+        console.log(`[DUYGU] ${userId || '?'}: ${result.duygu} %${result.guven}`);
+        res.json(result);
+    } catch (err) {
+        console.error('[DUYGU] Hata:', err.message);
+        res.json({ duygu: 'sakin', guven: 0 });
     }
 });
 
