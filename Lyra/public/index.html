@@ -5,392 +5,309 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lyra</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
     <style>
+        :root {
+            --primary: #c8a96e;
+            --accent: #e8c99a;
+            --bg: #1a1510;
+            --panel-bg: rgba(20, 15, 10, 0.65);
+            --border: rgba(200, 169, 110, 0.25);
+            --text-color: rgba(240, 230, 210, 0.92);
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            background: radial-gradient(circle at 50% 50%, #0a0a1a 0%, #000000 100%);
-            color: #fff;
+            background-color: var(--bg);
+            color: var(--text-color);
             font-family: 'Outfit', sans-serif;
             margin: 0;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
         }
 
         #canvas-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 1;
         }
 
+        /* ── LOADER ── */
+        #loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: #100d08;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.2s ease;
+        }
+
+        .loader-ring {
+            width: 64px; height: 64px;
+            border: 1.5px solid rgba(200, 169, 110, 0.15);
+            border-top: 1.5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin-bottom: 24px;
+        }
+
+        #loader-status {
+            letter-spacing: 6px;
+            font-size: 11px;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-weight: 200;
+            opacity: 0.8;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── MAIN UI ── */
         .ui-overlay {
             position: absolute;
-            top: 50px;
-            bottom: 60px;
-            left: 0;
-            right: 0;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 10;
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: space-between;
-            width: 100%;
-            transition: all 1s ease-in-out;
-            opacity: 1;
-            visibility: visible;
+            padding: 32px 40px 40px;
+            transition: opacity 0.8s ease;
         }
 
-        .ui-overlay.hidden {
-            display: flex !important;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transform: scale(0.95);
-        }
-
-        .top-section {
+        /* Top bar */
+        .top-bar {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 25px;
-            animation: fadeInDown 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            justify-content: space-between;
+            align-items: flex-start;
+            animation: fadeInDown 0.9s ease-out both;
         }
 
-        h1 {
+        .brand h1 {
             font-weight: 200;
             letter-spacing: 12px;
             margin: 0;
             text-transform: uppercase;
-            background: linear-gradient(to bottom, #fff, #00d2ff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            color: var(--accent);
+            font-size: 1.8rem;
             opacity: 0.9;
-            text-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
         }
 
-        .status-container {
-            background: rgba(0, 20, 40, 0.5);
-            backdrop-filter: blur(15px);
-            padding: 8px 18px;
-            border-radius: 40px;
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            font-size: 13px;
-            color: #00d2ff;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            animation: pulse-glow 2s infinite alternate;
-        }
-
-        @keyframes pulse-glow {
-            from { box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); }
-            to { box-shadow: 0 0 30px rgba(0, 210, 255, 0.5); }
-        }
-
-        button {
-            pointer-events: auto;
-            padding: 18px 55px;
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            border: 1px solid rgba(0, 210, 255, 0.5);
-            border-radius: 50px;
-            background: linear-gradient(135deg, rgba(0, 20, 40, 0.7), rgba(0, 50, 100, 0.7));
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 0 40px rgba(0, 210, 255, 0.2), inset 0 0 15px rgba(0,210,255,0.3);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
-
-        button:hover {
-            border-color: #00d2ff;
-            box-shadow: 0 0 60px rgba(0, 210, 255, 0.7), inset 0 0 25px rgba(0,210,255,0.6);
-            transform: translateY(-5px) scale(1.05);
-            background: linear-gradient(135deg, rgba(0, 40, 80, 0.8), rgba(0, 100, 150, 0.8));
-            color: #fff;
-        }
-
-        button::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(45deg) translateY(100%);
-            transition: transform 0.6s ease;
-        }
-        
-        button:hover::after {
-            transform: rotate(45deg) translateY(-100%);
-        }
-
-        #transcript {
-            margin: 0;
-            width: 80%;
-            max-width: 750px;
-            font-size: 20px;
-            font-weight: 300;
-            color: rgba(255, 255, 255, 0.95);
-            text-align: center;
-            line-height: 1.6;
-            min-height: 2em;
-            text-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
-            background: rgba(0, 10, 20, 0.6);
-            padding: 20px 30px;
-            border-radius: 25px;
-            border: 1px solid rgba(0, 210, 255, 0.15);
-            backdrop-filter: blur(15px);
-            animation: fadeInUp 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- NEW SLIDER UI --- */
-        .selector-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 40px;
-            margin: 20px 0;
-            pointer-events: auto;
-        }
-
-        .nav-arrow {
-            background: rgba(0, 210, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            color: #00d2ff;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 24px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .nav-arrow:hover {
-            background: rgba(0, 210, 255, 0.3);
-            transform: scale(1.1);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-        }
-
-        .char-display {
-            text-align: center;
-            min-width: 250px;
-        }
-
-        #currentCharName {
-            font-size: 28px;
-            font-weight: 600;
-            letter-spacing: 4px;
-            color: #fff;
-            text-transform: uppercase;
-            text-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
-            margin-bottom: 5px;
-        }
-
-        #currentCharDesc {
-            font-size: 13px;
-            color: #88fbff;
-            opacity: 0.7;
-            letter-spacing: 1px;
-        }
-
-        /* --- CHARACTER SELECTION UI --- */
-        .character-selector {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            gap: 30px;
-            z-index: 20;
-            pointer-events: auto;
-        }
-
-        .char-card {
-            background: rgba(0, 10, 20, 0.6);
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            width: 160px;
-        }
-
-        .char-card:hover {
-            border-color: #00d2ff;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
-            transform: translateY(-10px) scale(1.05);
-            background: rgba(0, 20, 40, 0.8);
-        }
-
-        .char-title {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .char-desc {
-            font-size: 12px;
-            color: #888;
-            line-height: 1.4;
-        }
-
-        .char-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            margin: 0 auto 20px auto;
-            border: 2px solid rgba(0, 210, 255, 0.5);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
-            background-color: rgba(0, 10, 20, 0.8);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 45px;
-        }
-
-        .char-card:hover .char-avatar {
-            border-color: #fff;
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.5);
-            transform: scale(1.1);
-        }
-
-        .hidden {
-            display: none !important;
-            pointer-events: none;
-        }
-
-        .step-title {
-            position: absolute;
-            top: -50px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            font-size: 24px;
-            font-weight: 200;
-            color: #00d2ff;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-        }
-
-        /* 3D Model Loading Spinner */
-        #loader-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            color: #00d2ff;
+        .status-badge {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            padding: 8px 22px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+            font-size: 10px;
             letter-spacing: 3px;
-            backdrop-filter: blur(10px);
+            text-transform: uppercase;
+            color: var(--primary);
         }
-        /* --- KAMERA & DUYGU WIDGET --- */
-        #camera-widget {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            z-index: 50;
+
+        /* Bottom interaction area */
+        .interaction-area {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 24px;
+            animation: fadeInUp 1s ease-out both;
+            width: 100%;
         }
 
-        #camera-toggle {
-            background: rgba(0,10,20,0.7);
-            border: 1px solid rgba(0,210,255,0.4);
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
+        #transcript {
+            background: var(--panel-bg);
+            backdrop-filter: blur(24px);
+            padding: 22px 44px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 780px;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 1.65;
+            min-height: 76px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            pointer-events: auto;
-            padding: 0;
-            letter-spacing: 0;
+            color: var(--text-color);
         }
 
-        #camera-toggle:hover {
-            border-color: #00d2ff;
-            box-shadow: 0 0 20px rgba(0,210,255,0.5);
-            transform: scale(1.1);
+        .controls {
+            display: flex;
+            gap: 16px;
+            pointer-events: auto;
+        }
+
+        .main-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            padding: 18px 60px;
+            border-radius: 100px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            font-size: 0.75rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(12px);
+            pointer-events: auto;
+        }
+
+        .main-btn:hover {
+            background: rgba(200, 169, 110, 0.15);
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .main-btn.active {
+            border-color: #c87060;
+            color: #e8a090;
+        }
+
+        .main-btn.active:hover {
+            background: rgba(200, 112, 96, 0.15);
+        }
+
+        /* Camera widget */
+        #camera-widget {
+            position: absolute;
+            bottom: 40px; right: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 14px;
+            pointer-events: auto;
         }
 
         #camera-preview {
-            width: 120px;
-            height: 90px;
-            border-radius: 12px;
-            border: 2px solid rgba(0,210,255,0.4);
+            width: 200px; height: 150px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
             object-fit: cover;
-            display: none;
-            box-shadow: 0 0 20px rgba(0,210,255,0.3);
-        }
-
-        #emotion-badge {
-            background: rgba(0,10,20,0.85);
-            border: 1px solid rgba(0,210,255,0.3);
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 11px;
-            color: #00d2ff;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            display: none;
-            backdrop-filter: blur(10px);
-            text-align: center;
-            min-width: 100px;
+            opacity: 0; visibility: hidden;
+            transform: scale(0.9) translateY(10px);
             transition: all 0.5s ease;
         }
 
-        #emotion-badge.active {
-            display: block;
-            animation: pulse-glow 2s infinite alternate;
+        #camera-preview.active {
+            opacity: 1; visibility: visible;
+            transform: scale(1) translateY(0);
         }
 
-        #camera-preview.active {
-            display: block;
+        .camera-btn {
+            width: 48px; height: 48px;
+            border-radius: 14px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            color: var(--primary);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
+
+        .camera-btn.active {
+            background: rgba(200, 169, 110, 0.2);
+            border-color: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden { display: none !important; }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(200,80,70,0.5); }
+            50%       { box-shadow: 0 0 0 10px rgba(200,80,70,0); }
+        }
+        @keyframes mic-wave {
+            0%, 100% { transform: scaleY(0.4); }
+            50%       { transform: scaleY(1.0); }
+        }
+
+        .status-badge.listening {
+            animation: pulse-red 1.2s ease-in-out infinite;
+            border-color: #c87060;
+            color: #e8a090;
+        }
+
+        #mic-indicator {
+            display: none;
+            align-items: center;
+            gap: 3px;
+            height: 24px;
+        }
+        #mic-indicator.active { display: flex; }
+        #mic-indicator span {
+            display: inline-block;
+            width: 3px;
+            background: var(--primary);
+            border-radius: 2px;
+            animation: mic-wave 0.8s ease-in-out infinite;
+        }
+        #mic-indicator span:nth-child(2) { animation-delay: 0.1s; }
+        #mic-indicator span:nth-child(3) { animation-delay: 0.2s; }
+        #mic-indicator span:nth-child(4) { animation-delay: 0.3s; }
+        #mic-indicator span:nth-child(5) { animation-delay: 0.15s; }
+
+        #loader-bar-wrap {
+            width: 220px;
+            height: 1px;
+            background: rgba(200,169,110,0.15);
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        #loader-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        #transcript {
+            transition: opacity 0.3s ease;
+        }
+
+        #error-toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(180, 60, 50, 0.9);
+            border: 1px solid rgba(220,100,90,0.4);
+            backdrop-filter: blur(12px);
+            color: #ffd4cc;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+        #error-toast.show { opacity: 1; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+
     <script type="importmap">
       {
         "imports": {
@@ -399,866 +316,583 @@
         }
       }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
 </head>
 
 <body>
+    <div id="loader-overlay">
+        <div class="loader-ring"></div>
+        <div id="loader-status">BAŞLATILIYOR...</div>
+        <div id="loader-bar-wrap">
+            <div id="loader-bar"></div>
+        </div>
+    </div>
 
-    <div id="loader-overlay" class="hidden">SİSTEMLER YÜKLENİYOR...</div>
+    <div id="error-toast"></div>
     <div id="canvas-container"></div>
-    <!-- Kamera hidden canvas (frame yakalamak için) -->
     <canvas id="hidden-canvas" style="display:none"></canvas>
 
-    <!-- KAMERA & DUYGU WIDGET -->
-    <div id="camera-widget">
-        <button id="camera-toggle" title="Kamera Analizi">📷</button>
-        <video id="camera-preview" autoplay muted playsinline></video>
-        <div id="emotion-badge">🔄 Analiz ediliyor...</div>
-    </div>
-
-    <!-- MAIN UI -->
     <div class="ui-overlay" id="mainUI">
-        <div class="top-section">
-            <h1>LYRA</h1>
-            
-            <div class="selector-container">
-                <div class="nav-arrow" id="prevBtn">❮</div>
-                <div class="char-display">
-                    <div id="currentCharName">Titan (Robot)</div>
-                    <div id="currentCharDesc">Sıcak, güvenilir ve sakin. Mimik kapasitesi yüksek.</div>
-                </div>
-                <div class="nav-arrow" id="nextBtn">❯</div>
-            </div>
-
-            <div class="status-container" id="status">HAFIZA BAĞLANTISI HAZIR</div>
-            <button id="talkBtn">BAŞLAT</button>
+        <div class="top-bar">
+            <div class="brand"><h1>LYRA</h1></div>
+            <div class="status-badge" id="status">SİSTEM HAZIR</div>
         </div>
-        <div id="transcript">"İleri düzey nöral deformasyon aktif..."</div>
+
+        <div class="interaction-area">
+            <div id="transcript">"Merhaba, bugün nasılsınız? Size nasıl yardımcı olabilirim?"</div>
+            <div class="controls">
+                <div id="mic-indicator">
+                    <span style="height:8px"></span>
+                    <span style="height:14px"></span>
+                    <span style="height:20px"></span>
+                    <span style="height:14px"></span>
+                    <span style="height:8px"></span>
+                </div>
+                <button class="main-btn" id="talkBtn">GÖRÜŞMEYİ BAŞLAT</button>
+            </div>
+        </div>
+
+        <div id="camera-widget">
+            <video id="camera-preview" autoplay muted playsinline></video>
+            <div class="status-badge" id="emotion-badge" style="display:none">ANALİZ...</div>
+            <button class="camera-btn" id="camera-toggle" title="Kamera Analizi">📷</button>
+        </div>
     </div>
 
-    <!-- Scripts -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import Vapi from "https://esm.sh/@vapi-ai/web";
 
-        // --- AUTH & IDENTITY ---
+        // ── AUTH ──
         let persistentUserId = localStorage.getItem('LYRA_USER_ID');
         if (!persistentUserId) {
-            persistentUserId = 'mahmet_' + Math.random().toString(36).substr(2, 5);
+            persistentUserId = 'user_' + Math.random().toString(36).substr(2, 6);
             localStorage.setItem('LYRA_USER_ID', persistentUserId);
         }
 
-        // --- VAPI SETUP ---
-        const VAPI_PUBLIC_KEY = "2bd1acf3-d1eb-423e-9e31-23418fe111d4";
-        const VAPI_ASSISTANT_ID = "25ef33ad-0459-4057-841f-ea222bdfa126";
+        // ── VAPI ──
+        const VAPI_PUBLIC_KEY    = "2bd1acf3-d1eb-423e-9e31-23418fe111d4";
+        const VAPI_ASSISTANT_ID  = "25ef33ad-0459-4057-841f-ea222bdfa126";
         const vapiInstance = new Vapi(VAPI_PUBLIC_KEY);
 
-        // --- UI ELEMENTS ---
-        const talkBtn = document.getElementById('talkBtn');
-        const statusEl = document.getElementById('status');
+        // ── UI ──
+        const talkBtn      = document.getElementById('talkBtn');
+        const statusEl     = document.getElementById('status');
         const transcriptEl = document.getElementById('transcript');
-        const mainUI = document.getElementById('mainUI');
         const loaderOverlay = document.getElementById('loader-overlay');
-        const currentCharName = document.getElementById('currentCharName');
-        const currentCharDesc = document.getElementById('currentCharDesc');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
+        const loaderStatus  = document.getElementById('loader-status');
+
+        // ── PROGRESS & ERRORS ──
+        const loaderBar = document.getElementById('loader-bar');
+        function setProgress(pct, label) {
+            if (loaderBar) loaderBar.style.width = pct + '%';
+            if (loaderStatus && label) loaderStatus.textContent = label;
+        }
+
+        function showError(msg) {
+            const t = document.getElementById('error-toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 4000);
+        }
 
         let isCallActive = false;
-        let targetVolume = 0;
-        let currentVolume = 0;
+        let targetVolume = 0, currentVolume = 0;
+        let fullConversation = "";
 
-        // --- KAMERA & DUYGU ANALİZİ SİSTEMİ ---
-        let cameraStream = null;
-        let cameraActive = false;
-        let emotionInterval = null;
-        let currentEmotionState = 'sakin'; // Kameradan gelen hamsız duygu (asistana gitmek için)
-
+        // ── CAMERA ──
+        let cameraStream = null, cameraActive = false, emotionInterval = null;
+        let currentEmotionState = 'sakin';
         const cameraToggleBtn = document.getElementById('camera-toggle');
-        const cameraPreview = document.getElementById('camera-preview');
-        const emotionBadge = document.getElementById('emotion-badge');
-        const hiddenCanvas = document.getElementById('hidden-canvas');
+        const cameraPreview   = document.getElementById('camera-preview');
+        const emotionBadge    = document.getElementById('emotion-badge');
+        const hiddenCanvas    = document.getElementById('hidden-canvas');
 
         const EMOTION_EMOJIS = {
-            mutlu: '😊', üzgün: '😢', endişeli: '😰', korkmuş: '😨',
-            sakin: '😌', şaşırmış: '😮', sinirli: '😠', ağlamak_üzere: '😭'
+            mutlu:'😊', üzgün:'😢', endişeli:'😰', korkmuş:'😨',
+            sakin:'😌', şaşırmış:'😮', sinirli:'😠', ağlamak_üzere:'😭'
         };
 
         async function startCamera() {
             try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: false });
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video:{width:320,height:240}, audio:false });
                 cameraPreview.srcObject = cameraStream;
                 cameraPreview.classList.add('active');
-                emotionBadge.classList.add('active');
+                emotionBadge.style.display = '';
                 emotionBadge.textContent = '🔄 Analiz başlıyor...';
                 cameraActive = true;
+                cameraToggleBtn.classList.add('active');
                 cameraToggleBtn.textContent = '🟢';
-                cameraToggleBtn.style.borderColor = '#00ff88';
-
-                // Her 5 saniyede bir duygu analizi yap
                 emotionInterval = setInterval(analyzeEmotion, 5000);
-                setTimeout(analyzeEmotion, 1000); // ilk analiz hemen
-            } catch (err) {
+                setTimeout(analyzeEmotion, 1000);
+            } catch(err) {
                 console.error('[KAMERA] Erişim reddedildi:', err);
-                emotionBadge.textContent = '❌ Kamera izni gerekli';
-                emotionBadge.classList.add('active');
             }
         }
 
         function stopCamera() {
             if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-            cameraStream = null;
-            cameraActive = false;
+            cameraStream = null; cameraActive = false;
             clearInterval(emotionInterval);
             cameraPreview.classList.remove('active');
             cameraPreview.srcObject = null;
-            emotionBadge.classList.remove('active');
+            emotionBadge.style.display = 'none';
+            cameraToggleBtn.classList.remove('active');
             cameraToggleBtn.textContent = '📷';
-            cameraToggleBtn.style.borderColor = '';
         }
 
         async function analyzeEmotion() {
             if (!cameraActive || !cameraStream) return;
             try {
-                // Analiz için çözünürlüğü düşür (Maliyet ve hız için 160x120 yeterli)
-                hiddenCanvas.width = 160;
-                hiddenCanvas.height = 120;
+                hiddenCanvas.width = 160; hiddenCanvas.height = 120;
                 const ctx = hiddenCanvas.getContext('2d');
                 ctx.drawImage(cameraPreview, 0, 0, 160, 120);
                 const base64 = hiddenCanvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-
                 const resp = await fetch('/analyze-emotion', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        imageBase64: base64,
-                        userId: persistentUserId // userId'yi gönderiyoruz
-                    })
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ imageBase64: base64, userId: persistentUserId })
                 });
                 const data = await resp.json();
-
                 if (data.duygu) {
                     currentEmotionState = data.duygu;
                     const emoji = EMOTION_EMOJIS[data.duygu] || '🔮';
-                    const confidence = data.guven ? `%${data.guven}` : '';
-                    emotionBadge.textContent = `${emoji} ${data.duygu} ${confidence}`;
-
-                    // Badge rengini duyguya göre değiştir
-                    const colorMap = {
-                        mutlu: '#00ff88', üzgün: '#4488ff', endişeli: '#ffaa00',
-                        korkmuş: '#ff4444', sakin: '#00d2ff', şaşırmış: '#ff88ff',
-                        sinirli: '#ff6600', ağlamak_üzere: '#88aaff'
-                    };
-                    emotionBadge.style.color = colorMap[data.duygu] || '#00d2ff';
-                    emotionBadge.style.borderColor = (colorMap[data.duygu] || '#00d2ff') + '66';
-
-                    console.log(`[DUYGU] ${data.duygu} (%${data.guven}) - ${data.aciklama || ''}`);
+                    emotionBadge.textContent = `${emoji} ${data.duygu}`;
                 }
-            } catch (err) {
-                console.warn('[KAMERA ANALİZ] Hata:', err.message);
-            }
+            } catch(err) { console.warn('[DUYGU]', err.message); }
         }
 
-        cameraToggleBtn.addEventListener('click', () => {
-            if (cameraActive) stopCamera();
-            else startCamera();
-        });
+        cameraToggleBtn.addEventListener('click', () => { cameraActive ? stopCamera() : startCamera(); });
 
-        let fullConversation = "";
-
-        const characters = [
-            { 
-                name: "Titan (Robot)", 
-                model: "avatar.glb", 
-                desc: "Sıcak, güvenilir ve sakin. Mimik kapasitesi yüksek.", 
-                emoji: "🤖",
-                animMap: { 'Yes': 'Yes', 'No': 'No', 'Wave': 'Wave', 'Jump': 'Jump' },
-                scaleMult: 1.0
-            },
-            { 
-                name: "Kozmik Dinozor", 
-                model: "dino/scene.gltf", 
-                desc: "Tarih öncesi gücün modern uzay zırhlarıyla buluştuğu vahşi bir rehber.", 
-                emoji: "🦖",
-                animMap: { 'Yes': 'walk', 'No': 'walk', 'Wave': 'walk', 'Jump': 'walk' },
-                scaleMult: 1.4 // Dinozoru %40 daha büyük yapıyoruz
-            },
-            { 
-                name: "SüngerBob", 
-                model: "spongebob.glb", 
-                desc: "Deniz altından gelen efsanevi neşe ve terapi.", 
-                emoji: "🧽",
-                animMap: { 
-                    'Yes': 'Agreeing', 
-                    'No': 'Disagreeing', 
-                    'Wave': 'Wave', 
-                    'Jump': 'Joyful Jump',
-                    'Dance': 'Silly Dance',
-                    'Surprise': 'Surprise',
-                    'Looking': 'Looking',
-                    'Talk': 'Talk'
-                },
-                scaleMult: 1.55 // Biraz daha büyüttük
-            }
-        ];
-        let currentCharIndex = 0;
-        let isSwitching = false;
-
-        // --- THREE.JS ENGINE ---
-        let scene, camera, renderer, material;
+        // ── THREE.JS ──
+        let scene, camera, renderer, composer, clock;
         let avatar, mixer, currentAction;
         let animationsMap = {};
-        let starGeo, stars; // Starfield
-        let moonGroup, satelliteGroup, astronautGroup; // Background Objects
-        let meteors = []; // Meteor Showers!
-        const clock = new THREE.Clock();
+        let cameraTarget = new THREE.Vector3(0, 0.5, 0);
+        let blinkTime = 0, emotionState = 'neutral';
         const container = document.getElementById('canvas-container');
 
-        // Boş sahneyi en baştan başlat
-        function initEmptyScene() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.5, 8); 
+        // Lyra karakter tanımı
+        const character = {
+            name: "Lyra",
+            model: "avatar.glb",
+            animMap: {
+                'Yes':'Agreeing', 'No':'Disagreeing', 'Wave':'Wave',
+                'Jump':'Joyful Jump', 'Dance':'Wave Hip Hop Dance',
+                'Surprise':'Surprised', 'Looking':'Looking Around', 'Talk':'Talk',
+                'Sad':'Sad Idle',
+                'Angry':'Angry Gesture'
+            },
+            scaleMult: 1.0
+        };
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // Extra animasyon dosyaları
+        const extraAnims = [
+            { file:'Agreeing.glb',           name:'Agreeing' },
+            { file:'Jump.glb',               name:'Joyful Jump' },
+            { file:'Waving.glb',             name:'Wave' },
+            { file:'Talking.glb',            name:'Talk' },
+            { file:'Shaking Head No.glb',    name:'Disagreeing' },
+            { file:'Surprised.glb',          name:'Surprised' },
+            { file:'Looking Around.glb',     name:'Looking Around' },
+            { file:'Idle.glb',               name:'Idle' },
+            { file:'Sad Idle.glb',           name:'Sad Idle' },
+            { file:'Wave Hip Hop Dance.glb', name:'Wave Hip Hop Dance' },
+            { file:'Angry Gesture.glb',      name:'Angry Gesture' },
+        ];
+
+        function initScene() {
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // Başlangıç pozisyonu — room yüklenince güncellenecek
+            camera.position.set(0, 1.2, 5);
+
+            renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:"high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
             container.appendChild(renderer.domElement);
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambientLight);
+            clock = new THREE.Clock();
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(5, 10, 7.5);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
+            // Işıklandırma — sıcak terapi odası
+            scene.add(new THREE.AmbientLight(0xfff0d8, 0.7));
+            const hemi = new THREE.HemisphereLight(0xffecd2, 0x3d2b1f, 0.8);
+            scene.add(hemi);
+            const sun = new THREE.DirectionalLight(0xffd4a0, 1.0);
+            sun.position.set(4, 8, 6); sun.castShadow = true;
+            sun.shadow.mapSize.set(1024, 1024);
+            scene.add(sun);
+            const fill = new THREE.DirectionalLight(0xffecd2, 0.4);
+            fill.position.set(-4, 3, 2);
+            scene.add(fill);
+            const warmPoint = new THREE.PointLight(0xff8844, 1.2, 18);
+            warmPoint.position.set(0, 4, 0);
+            scene.add(warmPoint);
+            // Şömine ateşi
+            const fireLight = new THREE.PointLight(0xff5500, 1.8, 12);
+            fireLight.position.set(0, 0.5, -10);
+            scene.add(fireLight);
+            window.fireLight = fireLight;
 
-            // Platform
-            const platformGeo = new THREE.CylinderGeometry(2, 2.5, 0.2, 32);
-            const platformMat = new THREE.MeshStandardMaterial({ 
-                color: 0x050515, 
-                metalness: 0.9, 
-                roughness: 0.1,
-                emissive: 0x00d2ff,
-                emissiveIntensity: 0.2
-            });
-            const platform = new THREE.Mesh(platformGeo, platformMat);
-            platform.position.y = -1.65;
-            platform.receiveShadow = true;
-            scene.add(platform);
-
-            // Platform Glow Ring
-            const ringGeo = new THREE.TorusGeometry(2, 0.05, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.y = -1.55;
-            scene.add(ring);
-
-            // 1. STARFIELD (WOW Effect Background)
-            starGeo = new THREE.BufferGeometry();
-            const starCount = 2000;
-            const starPositions = new Float32Array(starCount * 3);
-            for(let i=0; i < starCount * 3; i++) {
-                starPositions[i] = (Math.random() - 0.5) * 50;
-            }
-            starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-            const starMat = new THREE.PointsMaterial({
-                color: 0xffffff, size: 0.05, transparent: true, opacity: 0.8, sizeAttenuation: true
-            });
-            stars = new THREE.Points(starGeo, starMat);
-            scene.add(stars);
-
-            // --- BACKGROUND OBJECTS (Canlandırma) ---
-            
-            // 2. MOON (Ay)
-            const moonGeo = new THREE.SphereGeometry(3, 32, 32);
-            const moonMat = new THREE.MeshStandardMaterial({
-                color: 0xa0a0a0,
-                roughness: 1.0,
-                metalness: 0.1,
-                bumpScale: 0.02
-            });
-            const moon = new THREE.Mesh(moonGeo, moonMat);
-            moon.position.set(-15, 8, -25); // Arka sol üst
-            moon.receiveShadow = true;
-            
-            // Ay İçin Ekstra Işık (Parlaması için)
-            const moonLight = new THREE.PointLight(0xddffff, 2, 20);
-            moonLight.position.set(-12, 10, -22);
-            scene.add(moonLight);
-            
-            moonGroup = new THREE.Group();
-            moonGroup.add(moon);
-            scene.add(moonGroup);
-
-            // 3. ABSTRACT SATELLITE (Uydu)
-            satelliteGroup = new THREE.Group();
-            const satBodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.5, 16);
-            const satBodyMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9, roughness: 0.2 });
-            const satBody = new THREE.Mesh(satBodyGeo, satBodyMat);
-            satelliteGroup.add(satBody);
-            
-            const panelGeo = new THREE.BoxGeometry(2, 0.05, 0.8);
-            const panelMat = new THREE.MeshStandardMaterial({ color: 0x004488, metalness: 0.8, roughness: 0.3 });
-            const panel1 = new THREE.Mesh(panelGeo, panelMat);
-            panel1.position.x = 1.3;
-            satelliteGroup.add(panel1);
-            
-            const panel2 = new THREE.Mesh(panelGeo, panelMat);
-            panel2.position.x = -1.3;
-            satelliteGroup.add(panel2);
-            
-            satelliteGroup.position.set(12, 15, -15);
-            satelliteGroup.rotation.x = 0.5;
-            satelliteGroup.rotation.z = -0.3;
-            scene.add(satelliteGroup);
-
-            // 4. ABSTRACT ASTRONAUT (Uzakta sürüklenen minik astronot)
-            astronautGroup = new THREE.Group();
-            const astroBodyGeo = new THREE.BoxGeometry(0.5, 0.7, 0.4);
-            const astroMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
-            const astroBody = new THREE.Mesh(astroBodyGeo, astroMat);
-            astronautGroup.add(astroBody);
-            
-            const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 0.5;
-            astronautGroup.add(head);
-            
-            astronautGroup.position.set(-8, 5, -10);
-            scene.add(astronautGroup);
-
-            // 5. METEOR SHOWERS (Gerçekçi Kayan Yıldızlar / Kuyruklu Yıldız)
-            const cometHeadGeo = new THREE.SphereGeometry(0.06, 16, 16);
-            const cometHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const cometTailGeo = new THREE.ConeGeometry(0.1, 4, 16);
-            cometTailGeo.translate(0, 2, 0); // Koni ucunu pivot noktası yap
-            const cometTailMat = new THREE.MeshBasicMaterial({ 
-                color: 0x00d2ff, 
-                transparent: true, 
-                opacity: 0.6, 
-                blending: THREE.AdditiveBlending 
-            });
-
-            for (let i = 0; i < 5; i++) {
-                let mGroup = new THREE.Group();
-                
-                let head = new THREE.Mesh(cometHeadGeo, cometHeadMat);
-                let tail = new THREE.Mesh(cometTailGeo, cometTailMat);
-                tail.rotation.x = Math.PI / 2; // Kuyruk hareket yönünün tersine baksın
-                
-                mGroup.add(head);
-                mGroup.add(tail);
-
-                // Rastgele başlangıç pozisyonları
-                mGroup.position.set(
-                    20 + Math.random() * 40,
-                    15 + Math.random() * 20,
-                    -10 - Math.random() * 20
-                );
-                
-                let sx = 0.5 + Math.random() * 0.5;
-                let sy = 0.3 + Math.random() * 0.4;
-                mGroup.userData = { speedX: sx, speedY: sy };
-                
-                // Meteorun düşüş yönüne çevir
-                let dir = new THREE.Vector3(-sx, -sy, 0).normalize();
-                mGroup.lookAt(mGroup.position.clone().add(dir));
-                
-                scene.add(mGroup);
-                meteors.push(mGroup);
-            }
-
+            setupPostProcessing();
             animate();
-            
-            // İlk karakteri yükle
-            loadModel(characters[0].model);
+
+            setProgress(10, "SAHNE HAZIRLANIYOR...");
+            Promise.all([loadRoom(), loadAvatar()]).then(() => {
+                setProgress(100, "HAZIR");
+                playAnimation('Idle', true);
+                hideLoader();
+            });
         }
 
-        function loadModel(modelUrl) {
-            return new Promise((resolve, reject) => {
+        function loadRoom() {
+            return new Promise((resolve) => {
                 const loader = new GLTFLoader();
-                loader.load('/' + modelUrl, (gltf) => {
-                    avatar = gltf.scene;
-                    
-                    // --- SÜNGERBOB ÇİFT KLON VE RENK TEMİZLİĞİ (ÖLÇÜMDEN ÖNCE YAPILMALI!) ---
-                    let toRemove = [];
-                    avatar.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                            
-                            if (modelUrl.toLowerCase().includes('sponge')) {
-                                // 1. Gizli veya İkinci Versiyon Parçaları Tespit Et
-                                const name = child.name.toLowerCase();
-                                if (name.includes('sketch') || name.includes('variant2') || name.includes('1') || child.position.x > 5 || child.position.x < -5) {
-                                    toRemove.push(child);
-                                } else {
-                                    // Orijinal parçaysa renkleri giydir
-                                    if (!window.sbTex) {
-                                        window.sbTex = new THREE.TextureLoader().load('/spongebob_color.png');
-                                        window.sbTex.flipY = false;
-                                        window.sbTex.colorSpace = THREE.SRGBColorSpace;
-                                    }
-                                    if (child.material) {
-                                        child.material = new THREE.MeshStandardMaterial({
-                                            map: window.sbTex,
-                                            roughness: 0.6,
-                                            metalness: 0.1
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    });
+                loader.load('/room_model/scene.gltf', (gltf) => {
+                    const room = gltf.scene;
+                    room.traverse(n => { if(n.isMesh) { n.receiveShadow = true; n.castShadow = true; } });
+                    scene.add(room);
 
-                    // Yanlış olan parçaları sahnede boyut hesaplanmadan ÖNCE tamamen sil
-                    toRemove.forEach(c => c.removeFromParent());
+                    const box    = new THREE.Box3().setFromObject(room);
+                    const size   = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+                    window.roomBox    = box;
+                    window.roomCenter = center;
+                    window.floorY     = box.min.y;
 
-                    // --- KUSURSUZ OTURTMA (PERFECT GROUNDING) ALGORİTMASI ---
-                    avatar.position.set(0, 0, 0);
-                    avatar.scale.set(1, 1, 1);
-                    avatar.updateMatrixWorld(true);
-                    
-                    // Boyutları şimdi sadece ana karakter üzerinden mükemmel şekilde ölçüyoruz!
-                    let box = new THREE.Box3().setFromObject(avatar);
-                    let size = box.getSize(new THREE.Vector3());
-                    let maxDim = Math.max(size.x, size.y, size.z);
-                    
-                    const charData = characters.find(c => c.model === modelUrl) || characters[0];
-                    let baseScale = (modelUrl === "avatar.glb") ? 0.8 : (2.8 / (maxDim || 1));
-                    let targetScale = baseScale * charData.scaleMult;
+                    console.log('[ROOM] size:', size, 'center:', center, 'boxMinY:', box.min.y);
 
-                    avatar.scale.set(targetScale, targetScale, targetScale);
-                    avatar.updateMatrixWorld(true);
-                    
-                    let newBox = new THREE.Box3().setFromObject(avatar);
-                    let center = newBox.getCenter(new THREE.Vector3());
-                    
-                    avatar.position.x = -center.x;
-                    avatar.position.z = -center.z;
-                    avatar.position.y = (-1.55) - newBox.min.y;
-                    
-                    // Süngerbob eksen kayması manuel düzeltme
-                    if (modelUrl.toLowerCase().includes('sponge')) {
-                        avatar.position.x = -center.x; // KUSURSUZ ORTA!
-                        avatar.position.y -= 0.1; // Çok hafif aşağı al (ayakları platforma bassın)
-                    }
-                    
-                    avatar.updateMatrixWorld(true);
-
-                    scene.add(avatar);
-
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        mixer = new THREE.AnimationMixer(avatar);
-                        animationsMap = {};
-                        gltf.animations.forEach((clip) => {
-                            animationsMap[clip.name] = mixer.clipAction(clip);
-                        });
-                        
-                        let idleName = 'Idle';
-                        if (!animationsMap['Idle'] && animationsMap['idle']) idleName = 'idle';
-                        else if (!animationsMap['Idle'] && !animationsMap['idle'] && gltf.animations.length > 0) idleName = gltf.animations[0].name;
-                        
-                        if (animationsMap[idleName]) {
-                            currentAction = animationsMap[idleName];
-                            currentAction.play();
-                            window.currentIdleName = idleName;
-                        }
-                    } else if (modelUrl.toLowerCase().includes('sponge')) {
-                        // Eğer Süngerbob animasyonsuzsa yine de bir Mikser açalım ki diğer dosyaları gömebilelim
-                        mixer = new THREE.AnimationMixer(avatar);
-                        animationsMap = {};
-                    }
-                    
-                    // --- SÜNGERBOB EKSTRA ANİMASYON YÜKLEYİCİSİ ---
-                    if (modelUrl.toLowerCase().includes('sponge')) {
-                        const extraAnimations = [
-                            { file: 'Agreeing.glb', name: 'Agreeing' },
-                            { file: 'Jump.glb', name: 'Joyful Jump' },
-                            { file: 'Waving.glb', name: 'Wave' },
-                            { file: 'Talking.glb', name: 'Talk' },
-                            { file: 'Shaking Head No.glb', name: 'Disagreeing' },
-                            { file: 'Surprised.glb', name: 'Surprise' },
-                            { file: 'Looking Around.glb', name: 'Looking' }
-                        ];
-
-                        Promise.all(extraAnimations.map(animData => {
-                            return new Promise((res) => {
-                                loader.load('/' + animData.file, (animGltf) => {
-                                    if (animGltf.animations && animGltf.animations.length > 0) {
-                                        const clip = animGltf.animations[0];
-                                        // Animasyon ismini güncelleyerek haritaya (animasyon listesine) katıyoruz
-                                        animationsMap[animData.name] = mixer.clipAction(clip);
-                                    }
-                                    res();
-                                }, undefined, (err) => {
-                                    console.log("Animasyon yüklenemedi (Dosya public klasöründe yok):", animData.file);
-                                    res(); // Hata olsa da sistemi çökertme, geç
-                                });
-                            });
-                        })).then(() => {
-                            resolve(); // Tüm dış animasyonlar da yüklenince sistemi onayla
-                        });
+                    const raycaster = new THREE.Raycaster(
+                        new THREE.Vector3(center.x, box.max.y + 1, center.z),
+                        new THREE.Vector3(0, -1, 0)
+                    );
+                    const meshes = [];
+                    room.traverse(n => { if (n.isMesh) meshes.push(n); });
+                    const hits = raycaster.intersectObjects(meshes, false);
+                    if (hits.length > 0) {
+                        window.floorY = hits[0].point.y;
+                        console.log('[ROOM] raycasted floorY:', window.floorY);
                     } else {
-                        resolve(); // Süngerbob harici modeller direkt onaylansın
+                        window.floorY = box.min.y;
+                        console.log('[ROOM] fallback floorY:', window.floorY);
                     }
-                }, undefined, (error) => {
-                    console.error("Avatar failed to load:", error);
-                    reject(error);
+                    resolve();
+                }, undefined, (err) => {
+                    console.error('[ROOM] Yükleme hatası:', err);
+                    window.floorY = -1.5;
+                    window.roomCenter = new THREE.Vector3(0, 0, 0);
+                    resolve();
                 });
             });
         }
 
-        // --- CHARACTER SWITCHING (CLEAN & SIMPLE EFFECT) ---
-        async function switchCharacter(direction) {
-            if (isSwitching) return;
-            isSwitching = true;
-            
-            // 1. Karakteri küçült ve yok et (Clean scale down)
-            if (avatar) {
-                new TWEEN.Tween(avatar.scale)
-                    .to({ x: 0, y: 0, z: 0 }, 400)
-                    .easing(TWEEN.Easing.Back.In)
-                    .start();
-            }
+        function loadAvatar() {
+            return new Promise((resolve) => {
+                const loader = new GLTFLoader();
+                loader.load('/' + character.model, (gltf) => {
+                    loaderStatus.textContent = "AVATAR YÜKLENİYOR...";
 
-            setTimeout(async () => {
-                if (avatar) {
-                    scene.remove(avatar);
-                    if (mixer) mixer.stopAllAction();
-                }
-                
-                currentCharIndex += direction;
-                if (currentCharIndex < 0) currentCharIndex = characters.length - 1;
-                if (currentCharIndex >= characters.length) currentCharIndex = 0;
-                
-                const char = characters[currentCharIndex];
-                currentCharName.textContent = char.name;
-                currentCharDesc.textContent = char.desc;
-                
-                try {
-                    // loadModel KUSURSUZ ölçekleme ve hizalamayı zaten yapıyor!
-                    await loadModel(char.model);
-                    
-                    // Hesaplanan bu kusursuz hedef ölçeği aklımızda tutalım
-                    const targetScale = avatar.scale.x; 
-                    
-                    // Animasyon için modeli 0 boyutuna al (hizalaması bozulmasın diye scale set(0))
-                    avatar.scale.set(0,0,0);
-                    
-                    // Dönerek büyüme efekti (Spin & Pop)
-                    avatar.rotation.y = Math.PI; 
-                    new TWEEN.Tween(avatar.rotation)
-                        .to({ y: 0 }, 600)
-                        .easing(TWEEN.Easing.Quadratic.Out)
-                        .start();
+                    avatar = gltf.scene;
+                    avatar.traverse(n => { if(n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
 
-                    new TWEEN.Tween(avatar.scale)
-                        .to({ x: targetScale, y: targetScale, z: targetScale }, 600)
-                        .easing(TWEEN.Easing.Back.Out)
-                        .onComplete(() => {
-                            isSwitching = false;
-                            playAnimation('Wave');
+                    // Ölç ve boyutlandır
+                    avatar.position.set(0,0,0);
+                    avatar.scale.set(1,1,1);
+                    avatar.updateMatrixWorld(true);
+                    const aBox  = new THREE.Box3().setFromObject(avatar);
+                    const aSize = aBox.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(aSize.x, aSize.y, aSize.z);
+                    const targetH = 1.8;
+                    const sc = (targetH / maxDim) * character.scaleMult;
+                    avatar.scale.set(sc, sc, sc);
+                    avatar.updateMatrixWorld(true);
+
+                    // Zemine oturtur — X=0, Z=0 world origin, sadece Y zemine snap
+                    const newBox = new THREE.Box3().setFromObject(avatar);
+                    const fy = window.floorY !== undefined ? window.floorY : -1.0;
+
+                    const charH = (newBox.max.y - newBox.min.y);
+                    avatar.position.set(-0.6, fy - newBox.min.y, 0);
+                    avatar.updateMatrixWorld(true);
+
+                    // Kameraya biraz açılı baksın (daha doğal)
+                    avatar.rotation.y = Math.PI * 0.05;
+                    avatar.userData.baseRotY = Math.PI * 0.05;
+
+                    const camY  = fy + charH * 0.52;
+                    const camZ  = 2.8;
+                    camera.position.set(-0.6, camY, camZ);
+                    cameraTarget.set(-0.6, fy + charH * 0.42, 0);
+                    camera.lookAt(cameraTarget);
+                    window.defaultCam = { y: camY, z: camZ, tgtY: fy + charH * 0.42 };
+
+                    console.log('[CHAR] pos:', avatar.position, 'charH:', charH, 'fy:', fy);
+                    scene.add(avatar);
+
+                    // Mixer
+                    mixer = new THREE.AnimationMixer(avatar);
+                    animationsMap = {};
+                    if (gltf.animations) {
+                        gltf.animations.forEach(clip => {
+                            const validTracks = clip.tracks.filter(t => !!avatar.getObjectByName(t.name.split('.')[0]));
+                            if (validTracks.length > 0) {
+                                const nc = new THREE.AnimationClip(clip.name, clip.duration, validTracks);
+                                animationsMap[clip.name] = mixer.clipAction(nc);
+                            }
+                        });
+                    }
+
+                    // Extra animasyonları yükle
+                    loaderStatus.textContent = "ANİMASYONLAR YÜKLENİYOR...";
+                    const extraLoader = new GLTFLoader();
+                    Promise.all(extraAnims.map(({ file, name }) =>
+                        new Promise(res => {
+                            extraLoader.load('/' + file, (a) => {
+                                if (a.animations.length) {
+                                    const clip = a.animations[0];
+                                    const ft = clip.tracks.filter(t => !!avatar.getObjectByName(t.name.split('.')[0]));
+                                    if (ft.length > 0) {
+                                        const nc = new THREE.AnimationClip(name, clip.duration, ft);
+                                        animationsMap[name] = mixer.clipAction(nc);
+                                    }
+                                }
+                                res();
+                            }, undefined, () => res());
                         })
-                        .start();
-                } catch(e) {
-                    console.error("Yükleme hatası:", e);
-                    isSwitching = false;
-                }
-                
-            }, 400);
+                    )).then(() => {
+                        resolve();
+                    });
+
+                }, undefined, (err) => {
+                    console.error('[CHAR] Yükleme hatası:', err);
+                    resolve();
+                });
+            });
         }
 
-        prevBtn.addEventListener('click', () => switchCharacter(-1));
-        nextBtn.addEventListener('click', () => switchCharacter(1));
+        function hideLoader() {
+            loaderOverlay.style.opacity = '0';
+            setTimeout(() => loaderOverlay.classList.add('hidden'), 1000);
+        }
 
-        // --- ANIMATION SYSTEM ---
         function playAnimation(name, loop = false) {
             if (!mixer) return;
-            
-            // Character specific mapping (Mixamo support)
-            const currentChar = characters[currentCharIndex];
-            if (currentChar.animMap && currentChar.animMap[name]) {
-                name = currentChar.animMap[name];
-            }
-            
-            // Fallback for naming conventions (Idle vs idle)
-            if (name === 'Idle' && !animationsMap['Idle'] && animationsMap['idle']) name = 'idle';
-            if (name === 'Idle' && !animationsMap['Idle'] && !animationsMap['idle'] && window.currentIdleName) name = window.currentIdleName;
 
-            let targetAction = animationsMap[name];
-            
-            if (!targetAction) {
-                // Konuşma/Tepki animasyonları yoksa, dinozorun 'walk' veya sadece varolan diğer animasyonlarını tetikle
-                const availableNames = Object.keys(animationsMap);
-                if(availableNames.length > 1) {
-                    // Idle (bekleme) harici bir animasyon seç
-                    const dynamicNames = availableNames.filter(n => n.toLowerCase() !== 'idle');
-                    if(dynamicNames.length > 0) {
-                        const randomAnim = dynamicNames[Math.floor(Math.random() * dynamicNames.length)];
-                        targetAction = animationsMap[randomAnim];
-                    }
+            // animMap çevirisi
+            if (character.animMap && character.animMap[name]) name = character.animMap[name];
+
+            let action = animationsMap[name];
+
+            // Idle için fallback — mevcut animasyonlardan birini seç
+            if (!action) {
+                if (name === 'Idle' || name === 'idle') {
+                    action = Object.values(animationsMap).find(a => a._clip.name.toLowerCase().includes('idle'))
+                          || Object.values(animationsMap)[0];
+                } else {
+                    return; // bilinmeyen animasyon, yoksay
                 }
             }
 
-            if(!targetAction || currentAction === targetAction) return;
-            
-            const prevAction = currentAction;
-            currentAction = targetAction;
-            
-            if (!loop) {
-                currentAction.setLoop(THREE.LoopOnce, 1);
-                currentAction.clampWhenFinished = true;
-            } else {
+            if (!action || currentAction === action) return;
+
+            const prev = currentAction;
+            currentAction = action;
+
+            if (loop) {
                 currentAction.setLoop(THREE.LoopRepeat);
                 currentAction.clampWhenFinished = false;
-            }
-            
-            currentAction.reset();
-            currentAction.play();
-            currentAction.crossFadeFrom(prevAction, 0.5, true);
-            
-            if (!loop) {
+            } else {
+                currentAction.setLoop(THREE.LoopOnce, 1);
+                currentAction.clampWhenFinished = true;
                 mixer.addEventListener('finished', restoreIdle);
             }
+
+            currentAction.reset().play();
+            if (prev) currentAction.crossFadeFrom(prev, 0.5, true);
         }
 
         function restoreIdle(e) {
             if (e.action === currentAction) {
                 mixer.removeEventListener('finished', restoreIdle);
-                playAnimation(window.currentIdleName || 'Idle', true);
+                playAnimation('Idle', true);
             }
         }
 
-        let emotionState = 'neutral'; // 'neutral', 'sad', 'angry'
+        function setCamera(mode, durationMs = 1800) {
+            if (!avatar || !window.defaultCam) return;
+            const d = window.defaultCam;
+            const cx = avatar.position.x;
+            const cz = avatar.position.z;
+
+            let toCam, toTgt;
+            if (mode === 'close') {
+                toCam = { x: cx, y: d.y + 0.2, z: 1.8 };
+                toTgt = { x: cx, y: d.tgtY + 0.2, z: cz };
+            } else {
+                toCam = { x: cx, y: d.y, z: d.z };
+                toTgt = { x: cx, y: d.tgtY, z: cz };
+            }
+
+            new TWEEN.Tween(camera.position).to(toCam, durationMs)
+                .easing(TWEEN.Easing.Cubic.InOut).start();
+            new TWEEN.Tween(cameraTarget).to(toTgt, durationMs)
+                .easing(TWEEN.Easing.Cubic.InOut).start();
+        }
+
+        function setupPostProcessing() {
+            composer = new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene, camera));
+            const bloom = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.15, 0.5, 0.92
+            );
+            composer.addPass(bloom);
+        }
 
         function animate() {
             requestAnimationFrame(animate);
-            TWEEN.update(); // Update Tween.js
+            if (typeof TWEEN !== 'undefined') TWEEN.update();
             const delta = clock.getDelta();
+            const time  = clock.getElapsedTime();
 
-            // Smooth Volume Interpolation
             currentVolume += (targetVolume - currentVolume) * 0.15;
-
             if (mixer) mixer.update(delta);
-
-            // Rotate starfield slowly
-            if (stars) {
-                stars.rotation.y += 0.0005;
-                stars.rotation.x += 0.0002;
-            }
-
-            // Animate Meteor Showers
-            meteors.forEach(m => {
-                m.position.x -= m.userData.speedX * (delta * 60);
-                m.position.y -= m.userData.speedY * (delta * 60);
-
-                // Ekranda iyice yok olunca tekrar başlangıca at (farklı zamanlarda düşsünler)
-                if (m.position.x < -40 || m.position.y < -10) {
-                    if (Math.random() > 0.98) { // Sürekli yağmasınlar, ihtimalle geri gelsinler
-                        m.position.set(
-                            20 + Math.random() * 40,
-                            15 + Math.random() * 20,
-                            -10 - Math.random() * 20
-                        );
-                    }
-                }
-            });
-
-            // Animate background objects
-            const elapsedTime = clock.getElapsedTime();
-            if (moonGroup) {
-                moonGroup.rotation.y += 0.001; // Ay kendi etrafında yavaşça dönsün
-                moonGroup.position.y = 8 + Math.sin(elapsedTime * 0.2) * 0.5; // Ay hafif süzülsün
-            }
-            if (satelliteGroup) {
-                satelliteGroup.rotation.y += 0.005; // Uydu modeli dönsün
-                satelliteGroup.position.x = 12 + Math.sin(elapsedTime * 0.5) * 2; // Yere paralel orbit
-                satelliteGroup.position.z = -15 + Math.cos(elapsedTime * 0.5) * 2;
-            }
-            if (astronautGroup) {
-                astronautGroup.rotation.x += 0.002;
-                astronautGroup.rotation.y += 0.003;
-                astronautGroup.position.y = 5 + Math.sin(elapsedTime * 0.3) * 1;
-                astronautGroup.position.x = -8 + Math.cos(elapsedTime * 0.1) * 0.5;
-            }
+            camera.lookAt(cameraTarget);
 
             if (avatar) {
-                // Smooth rotation for a living feel
-                avatar.rotation.y = Math.sin(Date.now() * 0.001) * 0.1;
+                // Hafif doğal sallantı — sabit rotation.y üzerine eklenir
+                avatar.rotation.y = avatar.userData.baseRotY + Math.sin(time * 0.4) * 0.04;
+                // Hafif yüzme hissi
+                if (avatar.userData.baseY === undefined) avatar.userData.baseY = avatar.position.y;
+                avatar.position.y = avatar.userData.baseY + Math.sin(time * 1.8) * 0.006;
 
-                // Lip Sync using morph targets (Surprised/MouthOpen)
-                avatar.traverse((node) => {
+                // Lip sync
+                avatar.traverse(node => {
                     if (node.isMesh && node.morphTargetInfluences && node.morphTargetDictionary) {
-                        const targetIdx = node.morphTargetDictionary['Surprised'];
-                        const angryIdx = node.morphTargetDictionary['Angry'];
-                        const sadIdx = node.morphTargetDictionary['Sad'];
-                        
-                        // Konuşma sırasındaki temel dudak hareketi
-                        const exaggeratedVolume = currentVolume * 3.5;
-                        
-                        // Dudakları sese göre oynat
-                        if (targetIdx !== undefined) {
-                            node.morphTargetInfluences[targetIdx] += (exaggeratedVolume - node.morphTargetInfluences[targetIdx]) * 0.4;
-                        }
-                        
-                        // Şiddetli seste veya duygu durumuna göre yüz hatları
-                        let targetAngry = (emotionState === 'angry' || currentVolume > 0.4) ? 1.0 : 0.0;
-                        let targetSad = (emotionState === 'sad') ? 1.0 : 0.0;
-
-                        if (angryIdx !== undefined) {
-                            node.morphTargetInfluences[angryIdx] += (targetAngry - node.morphTargetInfluences[angryIdx]) * 0.1;
-                        }
-                        if (sadIdx !== undefined) {
-                            node.morphTargetInfluences[sadIdx] += (targetSad - node.morphTargetInfluences[sadIdx]) * 0.1;
+                        const d = node.morphTargetDictionary;
+                        const mIdx = d['MouthOpen'] ?? d['viseme_aa'] ?? d['Surprised'];
+                        if (mIdx !== undefined) node.morphTargetInfluences[mIdx] = currentVolume * 3.5;
+                        const bIdx = d['EyeBlink'] ?? d['Blink'];
+                        if (bIdx !== undefined) {
+                            if (time > blinkTime) {
+                                node.morphTargetInfluences[bIdx] = (time < blinkTime + 0.1) ? 1 : 0;
+                                if (time >= blinkTime + 0.1) blinkTime = time + 2.5 + Math.random() * 3.5;
+                            }
                         }
                     }
                 });
             }
 
-            renderer.render(scene, camera);
+            // Kamera organik sallantı
+            camera.position.y += Math.sin(time * 0.6) * 0.0003;
+            camera.position.x += Math.cos(time * 0.4) * 0.0003;
+
+            // Ateş titremesi
+            if (window.fireLight) {
+                window.fireLight.intensity = 1.5 + Math.sin(time * 9) * 0.4 + Math.random() * 0.15;
+            }
+
+            composer ? composer.render() : renderer.render(scene, camera);
         }
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            if (composer) composer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- VAPI EVENTS ---
+        // ── VAPI EVENTS ──
+        talkBtn.addEventListener('click', () => {
+            if (isCallActive) vapiInstance.stop();
+            else vapiInstance.start(VAPI_ASSISTANT_ID);
+        });
+
         vapiInstance.on('call-start', () => {
             isCallActive = true;
             fullConversation = "";
-            statusEl.textContent = "NÖRAL BAĞLANTI AKTİF";
-            statusEl.style.color = "#00f2fe";
+            statusEl.textContent = "GÖRÜŞME AKTİF";
+            statusEl.classList.add('listening');
             talkBtn.textContent = "BAĞLANTIYI KES";
-            console.log('✅ Vapi call started. User:', persistentUserId);
-        });
-
-        vapiInstance.on('error', (err) => {
-            console.error('❌ Vapi Error:', err);
+            talkBtn.classList.add('active');
+            document.getElementById('mic-indicator').classList.add('active');
+            setCamera('close', 1800);
         });
 
         vapiInstance.on('call-end', async () => {
-             isCallActive = false;
-             statusEl.textContent = "SİSTEM HAZIR";
-             statusEl.style.color = "#4facfe";
-             talkBtn.textContent = "BAŞLAT";
-             targetVolume = 0;
+            isCallActive = false;
+            statusEl.textContent = "SİSTEM HAZIR";
+            statusEl.classList.remove('listening');
+            talkBtn.textContent = "GÖRÜŞMEYİ BAŞLAT";
+            talkBtn.classList.remove('active');
+            document.getElementById('mic-indicator').classList.remove('active');
+            targetVolume = 0;
+            setCamera('normal', 2000);
 
-             if (fullConversation.length > 50) {
-                 console.log("Memory saving to local server...");
-                 try {
-                     await fetch('/save-local-memory', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
-                     });
-                 } catch(e) { console.error("Memory save failed:", e); }
-             }
+            if (fullConversation.length > 50) {
+                try {
+                    await fetch('/save-local-memory', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
+                    });
+                } catch(e) { console.error("Memory save failed:", e); }
+            }
         });
 
-        vapiInstance.on('volume-level', (volume) => {
-            targetVolume = volume;
-        });
+        vapiInstance.on('volume-level', vol => { targetVolume = vol; });
 
         vapiInstance.on('message', (message) => {
-            try {
-                if (message && message.type === 'transcript' && message.transcriptType === 'final' && message.transcript) {
-                    const originalText = message.transcript;
-                    const text = originalText.toLowerCase();
-                    fullConversation += (message.role || 'unknown') + ": " + originalText + "\n";
+            if (message?.type === 'transcript' && message.transcriptType === 'final') {
+                const text = message.transcript.toLowerCase();
+                fullConversation += (message.role || 'user') + ': ' + message.transcript + '\n';
+                transcriptEl.style.opacity = '0';
+                setTimeout(() => {
+                    transcriptEl.textContent = `"${message.transcript}"`;
+                    transcriptEl.style.opacity = '1';
+                }, 150);
 
-                    let cleanText = originalText;
-                    
-                    // [DUYGU:xxx] Etiketlerini Yakala (Türkçe karakter desteği ile)
-                    const emotionMatch = text.match(/\[duygu:([^\]]+)\]/);
-                    if (emotionMatch) {
-                        const tag = emotionMatch[1].trim();
-                        if (tag === 'mutlu') emotionState = 'neutral';
-                        else if (tag === 'üzgün' || tag === 'ağlamak_üzere') emotionState = 'sad';
-                        else if (tag === 'sinirli') emotionState = 'angry';
-                        
-                        // Etiketi ekrandan gizle
-                        cleanText = cleanText.replace(/\[DUYGU:[^\]]+\]/gi, '').trim();
-                    }
-                    
-                    transcriptEl.textContent = `"${cleanText}"`;
+                if      (text.includes('mutlu') || text.includes('harika')) emotionState = 'neutral';
+                else if (text.includes('üzgün') || text.includes('kötü'))   emotionState = 'sad';
+                else if (text.includes('sinirli'))                           emotionState = 'angry';
 
-                    if (text.includes('kötü') || text.includes('üzgün') || text.includes('maalesef') || text.includes('zor') || text.includes('acı')) {
-                        emotionState = 'sad';
-                    } else if (text.includes('kızgın') || text.includes('öfke') || text.includes('nefret')) {
-                        emotionState = 'angry';
-                    } else if (text.includes('harika') || text.includes('güzel') || text.includes('evet')) {
-                        emotionState = 'neutral';
-                    }
-
-                    // Animasyon Tetikleyicileri
-                    if (text.includes('[duygu:şaşırmış]') || text.includes('şaşırdım') || text.includes('inanılmaz')) {
-                        playAnimation('Surprise');
-                    } else if (text.includes('[duygu:endişeli]') || text.includes('bakalım') || text.includes('ilginç')) {
-                        playAnimation('Looking');
-                    } else if (text.includes('evet') || text.includes('tabii') || text.includes('anladım')) {
-                        playAnimation('Yes');
-                    } else if (text.includes('hayır') || text.includes('katılmıyorum') || text.includes('yok')) {
-                        playAnimation('No');
-                    } else if (text.includes('merhaba') || text.includes('selam')) {
-                        playAnimation('Wave');
-                    } else if (text.includes('dans') || text.includes('eğlenceli')) {
-                        playAnimation('Dance');
-                    } else {
-                        playAnimation('Talk');
-                    }
-                }
-            } catch (err) {
-                console.warn('⚠️ Mesaj işleme hatası:', err.message);
+                if      (text.includes('evet') || text.includes('kesinlikle') || text.includes('tabii'))
+                                                                              playAnimation('Yes');
+                else if (text.includes('hayır') || text.includes('değil'))   playAnimation('No');
+                else if (text.includes('merhaba') || text.includes('selam') || text.includes('hoş geldin'))
+                                                                              playAnimation('Wave');
+                else if (text.includes('dans'))                               playAnimation('Dance');
+                else if (text.includes('şaşır') || text.includes('inanılmaz') || text.includes('gerçekten mi'))
+                                                                              playAnimation('Surprise');
+                else if (text.includes('üzgün') || text.includes('zor') || text.includes('endişe'))
+                                                                              playAnimation('Sad');
+                else if (text.includes('sinirli') || text.includes('kızgın')) playAnimation('Angry');
+                else                                                           playAnimation('Talk');
             }
         });
 
-        // --- HEAD TEMİZLİĞİ (Favicon hatasını sustur) ---
-        const meta = document.createElement('link');
-        meta.rel = 'icon';
-        meta.href = 'data:,';
-        document.head.appendChild(meta);
-
-        talkBtn.addEventListener('click', async () => {
-            if (!isCallActive) {
-                statusEl.textContent = "HAFIZA YÜKLENIYOR...";
-                try {
-                    const memRes = await fetch(`/memory?userId=${persistentUserId}`);
-                    const { memory } = await memRes.json();
-                    console.log("🧠 Hafıza:", memory ? "✅ Var" : "⬜ Boş (ilk seans)");
-
-                    const memoryText = memory ? memory : "Bu kullanıcıyla ilk görüşmen. Onu tanımaya çalış.";
-                    
-                    // Hafızayı ve userId'yi ilet
-                    vapiInstance.start(VAPI_ASSISTANT_ID, {
-                        variableValues: { memory: memoryText },
-                        metadata: { userId: persistentUserId } // UserId'yi Vapi üzerinden server'a iletiyoruz
-                    });
-                } catch (err) {
-                    console.error("❌ Hata:", err);
-                    vapiInstance.start(VAPI_ASSISTANT_ID, { 
-                        metadata: { userId: persistentUserId } 
-                    });
-                }
-            } else {
-                vapiInstance.stop();
-            }
+        vapiInstance.on('error', (err) => {
+            console.error('[VAPI] Hata:', err);
+            isCallActive = false;
+            talkBtn.textContent = "GÖRÜŞMEYİ BAŞLAT";
+            talkBtn.classList.remove('active');
+            document.getElementById('mic-indicator').classList.remove('active');
+            statusEl.classList.remove('listening');
+            statusEl.textContent = "SİSTEM HAZIR";
+            showError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
         });
 
-        // Sayfa açıldığında boş uzay sahnesi & UI renderla
-        initEmptyScene();
+        // Başlat
+        initScene();
     </script>
 </body>
-
 </html>
