@@ -306,8 +306,116 @@
             pointer-events: none;
         }
         #error-toast.show { opacity: 1; }
+
+        /* ── LOGIN OVERLAY ── */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: #100d08;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease;
+        }
+        #login-overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .login-box {
+            width: 340px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            backdrop-filter: blur(20px);
+        }
+        .login-box h1 {
+            font-size: 2rem;
+            font-weight: 200;
+            letter-spacing: 0.4em;
+            color: var(--primary);
+            margin: 0 0 4px;
+        }
+        .login-box p {
+            font-size: 0.72rem;
+            letter-spacing: 0.15em;
+            color: rgba(200,169,110,0.5);
+            margin: 0 0 8px;
+            text-transform: uppercase;
+        }
+        .login-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text-color);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .login-input:focus { border-color: var(--primary); }
+        .login-input::placeholder { color: rgba(200,169,110,0.3); }
+
+        .remember-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: rgba(200,169,110,0.6);
+            cursor: pointer;
+        }
+        .remember-row input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 14px; height: 14px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 13px;
+            background: var(--primary);
+            color: #1a1510;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 4px;
+        }
+        .login-btn:hover { opacity: 0.85; }
+        .login-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            font-weight: 400;
+            margin-top: 0;
+        }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #login-error {
+            font-size: 0.78rem;
+            color: #e87060;
+            text-align: center;
+            min-height: 18px;
+            letter-spacing: 0.05em;
+        }
+        .login-divider {
+            width: 100%;
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 4px 0;
+        }
     </style>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script type="importmap">
       {
         "imports": {
@@ -319,7 +427,25 @@
 </head>
 
 <body>
-    <div id="loader-overlay">
+    <!-- ── GİRİŞ EKRANI ── -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h1>LYRA</h1>
+            <p>Kozmik Rehberinize Bağlanın</p>
+            <input class="login-input" type="email" id="login-email" placeholder="E-posta" autocomplete="email">
+            <input class="login-input" type="password" id="login-password" placeholder="Şifre" autocomplete="current-password">
+            <label class="remember-row">
+                <input type="checkbox" id="remember-me" checked>
+                Beni Hatırla
+            </label>
+            <div id="login-error"></div>
+            <button class="login-btn" id="login-btn">GİRİŞ YAP</button>
+            <hr class="login-divider">
+            <button class="login-btn secondary" id="register-btn">KAYIT OL</button>
+        </div>
+    </div>
+
+    <div id="loader-overlay" style="display:none">
         <div class="loader-ring"></div>
         <div id="loader-status">BAŞLATILIYOR...</div>
         <div id="loader-bar-wrap">
@@ -366,12 +492,124 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import Vapi from "https://esm.sh/@vapi-ai/web";
 
-        // ── AUTH ──
-        let persistentUserId = localStorage.getItem('LYRA_USER_ID');
-        if (!persistentUserId) {
-            persistentUserId = 'user_' + Math.random().toString(36).substr(2, 6);
-            localStorage.setItem('LYRA_USER_ID', persistentUserId);
+        // ── SUPABASE AUTH ──
+        let supabaseClient = null;
+        let persistentUserId = null;
+        let supabaseToken = null;
+
+        async function initAuth() {
+            // Config'i backend'den al
+            const cfg = await fetch('/config').then(r => r.json());
+            supabaseClient = supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+            // Mevcut oturumu kontrol et
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                persistentUserId = session.user.id;
+                supabaseToken = session.access_token;
+                hideLoginOverlay();
+            } else {
+                showLoginOverlay();
+            }
+
+            setupLoginHandlers();
         }
+
+        function showLoginOverlay() {
+            document.getElementById('login-overlay').style.display = 'flex';
+        }
+
+        function hideLoginOverlay() {
+            const el = document.getElementById('login-overlay');
+            el.classList.add('hidden');
+            // Loader'ı göster, sonra login overlay'i kapat
+            const loader = document.getElementById('loader-overlay');
+            loader.style.display = 'flex';
+            setTimeout(() => { el.style.display = 'none'; }, 700);
+        }
+
+        function setupLoginHandlers() {
+            const loginBtn = document.getElementById('login-btn');
+            const registerBtn = document.getElementById('register-btn');
+            const errorEl = document.getElementById('login-error');
+            const rememberMe = document.getElementById('remember-me');
+
+            async function doLogin() {
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                errorEl.textContent = '';
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'GİRİŞ YAPILIYOR...';
+
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) {
+                    errorEl.textContent = 'Hatalı e-posta veya şifre.';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'GİRİŞ YAP';
+                    return;
+                }
+
+                persistentUserId = data.user.id;
+                supabaseToken = data.session.access_token;
+
+                if (!rememberMe.checked) {
+                    // Remember me kapalıysa session'ı temizle çıkışta
+                    window._noRemember = true;
+                }
+
+                hideLoginOverlay();
+            }
+
+            loginBtn.addEventListener('click', doLogin);
+            document.getElementById('login-password').addEventListener('keydown', e => {
+                if (e.key === 'Enter') doLogin();
+            });
+
+            registerBtn.addEventListener('click', async () => {
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                errorEl.textContent = '';
+                registerBtn.disabled = true;
+                registerBtn.textContent = 'KAYIT YAPILIYOR...';
+
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) {
+                    errorEl.textContent = error.message;
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'KAYIT OL';
+                    return;
+                }
+
+                if (data.user && data.session) {
+                    persistentUserId = data.user.id;
+                    supabaseToken = data.session.access_token;
+                    hideLoginOverlay();
+                } else {
+                    errorEl.textContent = 'E-posta doğrulama gerekiyor, lütfen e-postanı kontrol et.';
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'KAYIT OL';
+                }
+            });
+        }
+
+        // Auth bittikten sonra sahneyi başlat
+        initAuth().then(() => {
+            // loader-overlay başlangıçta gizli — auth geçtikten sonra initScene çağrılacak
+            // hideLoginOverlay içinde initScene tetiklenir (MutationObserver ile)
+            const loginOverlay = document.getElementById('login-overlay');
+            const observer = new MutationObserver(() => {
+                if (loginOverlay.style.display === 'none' && persistentUserId) {
+                    observer.disconnect();
+                    initScene();
+                }
+            });
+            observer.observe(loginOverlay, { attributes: true, attributeFilter: ['style'] });
+
+            // Eğer zaten giriş yapılmışsa (session var), overlay zaten gizlendi
+            if (loginOverlay.style.display === 'none' && persistentUserId) {
+                initScene();
+            }
+        });
 
         // ── VAPI ──
         const VAPI_PUBLIC_KEY    = "2bd1acf3-d1eb-423e-9e31-23418fe111d4";
@@ -543,11 +781,22 @@
             scene.add(fireLight);
             window.fireLight = fireLight;
 
+            // Avatar spotlight — konuşunca parlasın
+            const avatarSpot = new THREE.SpotLight(0xfff5e0, 1.2, 8, Math.PI / 5, 0.4);
+            avatarSpot.position.set(0, 4, 2);
+            avatarSpot.castShadow = false;
+            scene.add(avatarSpot);
+            scene.add(avatarSpot.target);
+            window.avatarSpot = avatarSpot;
+
             setupPostProcessing();
             animate();
 
-            setProgress(10, "SAHNE HAZIRLANIYOR...");
-            Promise.all([loadRoom(), loadAvatar()]).then(() => {
+            setProgress(10, "ODA YÜKLENİYOR...");
+            loadRoom().then(() => {
+                setProgress(40, "AVATAR YÜKLENİYOR...");
+                return loadAvatar();
+            }).then(() => {
                 setProgress(100, "HAZIR");
                 playAnimation('Idle', true);
                 hideLoader();
@@ -602,7 +851,29 @@
                     loaderStatus.textContent = "AVATAR YÜKLENİYOR...";
 
                     avatar = gltf.scene;
-                    avatar.traverse(n => { if(n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+
+                    // Toon gradient map (3 bant: gölge / orta / aydınlık)
+                    const gradientData = new Uint8Array([40, 140, 255]);
+                    const gradientTex = new THREE.DataTexture(gradientData, 3, 1, THREE.RedFormat);
+                    gradientTex.needsUpdate = true;
+
+                    // Toon shader uygula
+                    avatar.traverse(n => {
+                        if (!n.isMesh) return;
+                        n.castShadow = true;
+                        n.receiveShadow = true;
+
+                        const origColor = n.material?.color
+                            ? n.material.color.clone()
+                            : new THREE.Color(0xc8a882);
+                        const origMap = n.material?.map || null;
+
+                        n.material = new THREE.MeshToonMaterial({
+                            color: origColor,
+                            map: origMap,
+                            gradientMap: gradientTex,
+                        });
+                    });
 
                     // Ölç ve boyutlandır
                     avatar.position.set(0,0,0);
@@ -611,7 +882,7 @@
                     const aBox  = new THREE.Box3().setFromObject(avatar);
                     const aSize = aBox.getSize(new THREE.Vector3());
                     const maxDim = Math.max(aSize.x, aSize.y, aSize.z);
-                    const targetH = 1.8;
+                    const targetH = 1.55;
                     const sc = (targetH / maxDim) * character.scaleMult;
                     avatar.scale.set(sc, sc, sc);
                     avatar.updateMatrixWorld(true);
@@ -621,22 +892,31 @@
                     const fy = window.floorY !== undefined ? window.floorY : -1.0;
 
                     const charH = (newBox.max.y - newBox.min.y);
-                    avatar.position.set(-0.6, fy - newBox.min.y, 0);
+                    // Odanın ortasına yerleştir
+                    avatar.position.set(0, fy - newBox.min.y, 0);
                     avatar.updateMatrixWorld(true);
 
-                    // Kameraya biraz açılı baksın (daha doğal)
-                    avatar.rotation.y = Math.PI * 0.05;
-                    avatar.userData.baseRotY = Math.PI * 0.05;
+                    // Kameraya baksın (varsayılan yön: +Z)
+                    avatar.rotation.y = 0;
+                    avatar.userData.baseRotY = 0;
 
-                    const camY  = fy + charH * 0.52;
-                    const camZ  = 2.8;
-                    camera.position.set(-0.6, camY, camZ);
-                    cameraTarget.set(-0.6, fy + charH * 0.42, 0);
+                    // Kamera: göğüs/baş hizasında, avatarın önünde
+                    const camY  = fy + charH * 0.65;
+                    const camZ  = charH * 2.2;
+                    camera.position.set(0, camY, camZ);
+                    cameraTarget.set(0, fy + charH * 0.55, 0);
                     camera.lookAt(cameraTarget);
-                    window.defaultCam = { y: camY, z: camZ, tgtY: fy + charH * 0.42 };
+                    window.defaultCam = { y: camY, z: camZ, tgtY: fy + charH * 0.55 };
 
                     console.log('[CHAR] pos:', avatar.position, 'charH:', charH, 'fy:', fy);
                     scene.add(avatar);
+
+                    // Avatar spotlight'ı karaktere yönelt
+                    if (window.avatarSpot) {
+                        window.avatarSpot.position.set(avatar.position.x, fy + charH * 1.8, avatar.position.z + 2);
+                        window.avatarSpot.target.position.set(avatar.position.x, fy + charH * 0.6, avatar.position.z);
+                        window.avatarSpot.target.updateMatrixWorld();
+                    }
 
                     // Mixer
                     mixer = new THREE.AnimationMixer(avatar);
@@ -730,16 +1010,16 @@
         function setCamera(mode, durationMs = 1800) {
             if (!avatar || !window.defaultCam) return;
             const d = window.defaultCam;
-            const cx = avatar.position.x;
-            const cz = avatar.position.z;
+            const ax = avatar.position.x;
+            const az = avatar.position.z;
 
             let toCam, toTgt;
             if (mode === 'close') {
-                toCam = { x: cx, y: d.y + 0.2, z: 1.8 };
-                toTgt = { x: cx, y: d.tgtY + 0.2, z: cz };
+                toCam = { x: ax, y: d.y + 0.15, z: az + 1.4 };
+                toTgt = { x: ax, y: d.tgtY + 0.15, z: az };
             } else {
-                toCam = { x: cx, y: d.y, z: d.z };
-                toTgt = { x: cx, y: d.tgtY, z: cz };
+                toCam = { x: ax, y: d.y, z: d.z };
+                toTgt = { x: ax, y: d.tgtY, z: az };
             }
 
             new TWEEN.Tween(camera.position).to(toCam, durationMs)
@@ -769,27 +1049,40 @@
             camera.lookAt(cameraTarget);
 
             if (avatar) {
-                // Hafif doğal sallantı — sabit rotation.y üzerine eklenir
-                avatar.rotation.y = avatar.userData.baseRotY + Math.sin(time * 0.4) * 0.04;
-                // Hafif yüzme hissi
+                // D) Breathing — yavaş ritmik nefes hareketi
+                const breathe = Math.sin(time * 1.1) * 0.008 + Math.sin(time * 2.3) * 0.003;
                 if (avatar.userData.baseY === undefined) avatar.userData.baseY = avatar.position.y;
-                avatar.position.y = avatar.userData.baseY + Math.sin(time * 1.8) * 0.006;
+                avatar.position.y = avatar.userData.baseY + breathe;
 
-                // Lip sync
+                // Hafif doğal sallantı
+                avatar.rotation.y = avatar.userData.baseRotY + Math.sin(time * 0.35) * 0.03;
+
+                // A) Lip sync: morph target varsa kullan, yoksa head nod ile simüle et
+                let hasMorph = false;
                 avatar.traverse(node => {
                     if (node.isMesh && node.morphTargetInfluences && node.morphTargetDictionary) {
                         const d = node.morphTargetDictionary;
                         const mIdx = d['MouthOpen'] ?? d['viseme_aa'] ?? d['Surprised'];
-                        if (mIdx !== undefined) node.morphTargetInfluences[mIdx] = currentVolume * 3.5;
+                        if (mIdx !== undefined) { node.morphTargetInfluences[mIdx] = currentVolume * 3.5; hasMorph = true; }
                         const bIdx = d['EyeBlink'] ?? d['Blink'];
                         if (bIdx !== undefined) {
-                            if (time > blinkTime) {
-                                node.morphTargetInfluences[bIdx] = (time < blinkTime + 0.1) ? 1 : 0;
-                                if (time >= blinkTime + 0.1) blinkTime = time + 2.5 + Math.random() * 3.5;
-                            }
+                            node.morphTargetInfluences[bIdx] = (time > blinkTime && time < blinkTime + 0.1) ? 1 : 0;
+                            if (time >= blinkTime + 0.1) blinkTime = time + 2.5 + Math.random() * 3.5;
                         }
                     }
                 });
+                // Morph target yoksa: konuşurken hafif baş hareketi
+                if (!hasMorph && currentVolume > 0.05) {
+                    avatar.rotation.x = Math.sin(time * 8) * currentVolume * 0.04;
+                } else {
+                    avatar.rotation.x *= 0.9; // sıfıra dön
+                }
+
+                // C) Avatar spotlight — konuşunca parlaklık artar
+                if (window.avatarSpot) {
+                    const targetIntensity = 1.2 + currentVolume * 2.0;
+                    window.avatarSpot.intensity += (targetIntensity - window.avatarSpot.intensity) * 0.08;
+                }
             }
 
             // Kamera organik sallantı
@@ -812,9 +1105,17 @@
         });
 
         // ── VAPI EVENTS ──
-        talkBtn.addEventListener('click', () => {
-            if (isCallActive) vapiInstance.stop();
-            else vapiInstance.start(VAPI_ASSISTANT_ID);
+        talkBtn.addEventListener('click', async () => {
+            if (isCallActive) { vapiInstance.stop(); return; }
+
+            // Backend'e token ile aktif kullanıcıyı bildir
+            await fetch('/session-start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: supabaseToken })
+            });
+
+            vapiInstance.start(VAPI_ASSISTANT_ID);
         });
 
         vapiInstance.on('call-start', () => {
@@ -891,8 +1192,6 @@
             showError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
         });
 
-        // Başlat
-        initScene();
     </script>
 </body>
 </html>

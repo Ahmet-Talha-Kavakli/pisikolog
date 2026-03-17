@@ -1,0 +1,7 @@
+node_modules/
+persistent_memory.json
+tmp/
+history.json
+patch4.cjs
+test-openai.js
+docs/

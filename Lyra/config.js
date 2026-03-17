@@ -32,7 +32,5 @@ export const CONFIG = {
   Format: [DUYGU:mutlu] veya [DUYGU:üzgün] veya [DUYGU:endişeli] veya [DUYGU:sakin] veya [DUYGU:sinirli] veya [DUYGU:şaşırmış]
   Etiket cevabın ilk kelimesi olarak gelecek, geri kalan cevap normal devam edecek.
 
-  [SENİN BU KULLANICI HAKKINDAKİ KALICI HAFIZAN]:
-  {{memory}}
   `
 };

@@ -3,19 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CONFIG } from './config.js';
-import { Client } from 'node-osc';
-
-const oscClient = new Client('127.0.0.1', 8000); // Unreal OSC Default Port
-
+import { createClient } from '@supabase/supabase-js';
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PERSISTENT_MEMORY_FILE = path.join(__dirname, 'persistent_memory.json');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -30,42 +24,69 @@ app.get('/', (req, res) => {
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // --- DUYGU DURUMU TAKİBİ ---
 const userEmotions = new Map(); // userId -> { duygu, guven, timestamp }
 
-// ─── HAFIZA YÖNETİMİ ──────────────────────────────────────
-const getPersistentMemory = () => {
-    if (!fs.existsSync(PERSISTENT_MEMORY_FILE)) return {};
-    try { return JSON.parse(fs.readFileSync(PERSISTENT_MEMORY_FILE, 'utf8')); }
-    catch (e) { return {}; }
-};
-const savePersistentMemory = (data) => {
-    fs.writeFileSync(PERSISTENT_MEMORY_FILE, JSON.stringify(data, null, 2));
+// --- AKTİF OTURUM ---
+let activeSessionUserId = null;
+
+// ─── HAFIZA YÖNETİMİ (Supabase) ───────────────────────────
+const getMemory = async (userId) => {
+    if (!userId) return '';
+    try {
+        const { data } = await supabase.from('memories').select('content').eq('user_id', userId).single();
+        return data?.content || '';
+    } catch { return ''; }
 };
 
-// ─── PING (Tünel sağlık kontrolü) ─────────────────────────
+const saveMemory = async (userId, content) => {
+    if (!userId) return;
+    try {
+        await supabase.from('memories').upsert({ user_id: userId, content, updated_at: new Date().toISOString() });
+    } catch (e) { console.error('[MEMORY] Kaydetme hatası:', e.message); }
+};
+
+// ─── CONFIG (Frontend için Supabase bilgileri) ──────────────
+app.get('/config', (req, res) => {
+    res.json({
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseAnonKey: process.env.SUPABASE_ANON_KEY
+    });
+});
+
+// ─── PING ──────────────────────────────────────────────────
 app.get('/ping', (req, res) => {
     res.send('Lyra Brain is ALIVE! 🌌');
 });
 
-// ─── HAFIZA OKUMA (Browser'dan çağrılır, arama başlamadan önce) ────────────
-app.get('/memory', (req, res) => {
+// ─── OTURUM BAŞLAT (Token doğrulama ile) ───────────────────
+app.post('/session-start', async (req, res) => {
+    const { token } = req.body;
+    if (token) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser(token);
+            if (user) {
+                activeSessionUserId = user.id;
+                console.log(`[SESSION] Aktif kullanıcı: ${user.id} (${user.email})`);
+            }
+        } catch (e) {
+            console.error('[SESSION] Token doğrulama hatası:', e.message);
+        }
+    }
+    res.sendStatus(200);
+});
+
+// ─── HAFIZA OKUMA ───────────────────────────────────────────
+app.get('/memory', async (req, res) => {
     const userId = req.query.userId;
-    const allMemory = getPersistentMemory();
-    const memory = userId ? (allMemory[userId] || '') : '';
+    const memory = await getMemory(userId);
     console.log(`[MEMORY READ] userId: ${userId}, hasMemory: ${!!memory}`);
     res.json({ memory });
 });
 
-function buildSystemPrompt(userSummary) {
-    const memoryContext = userSummary
-        ? `\n\n[SENİN BU KULLANICI HAKKINDAKİ KALICI HAFIZAN]:\n${userSummary}\n\nBu bilgileri temel alarak ama asla hissettirmeden doğal şekilde konuş.`
-        : '\n\n[Bu kullanıcıyla ilk görüşmedesin. Onu tanımaya çalış.]';
-    return CONFIG.SYSTEM_PROMPT.replace(/\[APP_NAME\]/g, CONFIG.APP_NAME) + memoryContext;
-}
-
-// ─── VAPI WEBHOOK (Arama bitince hafızayı kaydet) ─────────────────────────
+// ─── VAPI WEBHOOK (Arama bitince hafızayı kaydet) ──────────
 app.post('/vapi-webhook', async (req, res) => {
     const { message } = req.body;
     if (!message) return res.json({});
@@ -73,21 +94,9 @@ app.post('/vapi-webhook', async (req, res) => {
     const msgType = message.type;
     console.log(`[VAPI WEBHOOK] Type: ${msgType}`);
 
-    // Real-time lip-sync data from Vapi
-    if (msgType === 'conversation-update' || msgType === 'speech-update') {
-        const amplitude = message.analyzer?.amplitude || 0;
-        // Send to Unreal via OSC
-        oscClient.send('/vapi/amplitude', amplitude, () => {
-            // Optional: console.log(`[OSC] Sent amplitude: ${amplitude}`);
-        });
-    }
-
     if (msgType === 'end-of-call-report') {
-        const callId = message.call?.id || 'unknown';
         const transcript = message.transcript || '';
-
-        // metadata'dan userId'yi al (start()'ta gönderdik)
-        const userId = message.call?.metadata?.userId || callId;
+        const userId = activeSessionUserId;
 
         if (!transcript || transcript.length < 50) {
             console.log('[END OF CALL] Konuşma çok kısa, özetlenmiyor.');
@@ -101,12 +110,7 @@ app.post('/vapi-webhook', async (req, res) => {
                 messages: [
                     {
                         role: 'system',
-                        content: `Kullanıcı ile yapılan konuşmayı analiz et ve şu bilgileri kısa maddeler halinde özetle:
-- Kullanıcının adı (varsa)
-- Temel endişeleri ve sorunları
-- Kişilik özellikleri ve ruh hali
-- Lyra'nın bir dahaki seferde hatırlaması gereken önemli detaylar
-Maksimum 150 kelime.`
+                        content: `Kullanıcı ile yapılan konuşmayı analiz et ve şu bilgileri kısa maddeler halinde özetle:\n- Kullanıcının adı (varsa)\n- Temel endişeleri ve sorunları\n- Kişilik özellikleri ve ruh hali\n- Lyra'nın bir dahaki seferde hatırlaması gereken önemli detaylar\nMaksimum 150 kelime.`
                     },
                     { role: 'user', content: `Konuşma:\n${transcript}` }
                 ],
@@ -114,9 +118,7 @@ Maksimum 150 kelime.`
             });
 
             const summary = summaryResponse.choices[0].message.content;
-            const allMemory = getPersistentMemory();
-            allMemory[userId] = summary;
-            savePersistentMemory(allMemory);
+            await saveMemory(userId, summary);
             console.log(`[BRAIN ASCENSION] ✅ Hafıza mühürlendi! userId: ${userId}`);
             console.log(`[BRAIN ASCENSION] Özet: ${summary.substring(0, 100)}...`);
         } catch (err) {
@@ -127,10 +129,10 @@ Maksimum 150 kelime.`
     res.json({});
 });
 
-// ─── LOCAL MEMORY ENDPOINT (NO TUNNEL REQUIRED) ───────────
+// ─── LOCAL MEMORY ENDPOINT ─────────────────────────────────
 app.post('/save-local-memory', async (req, res) => {
     const { userId, transcript } = req.body;
-    
+
     if (!userId || !transcript || transcript.length < 50) {
         return res.sendStatus(200);
     }
@@ -142,12 +144,7 @@ app.post('/save-local-memory', async (req, res) => {
             messages: [
                 {
                     role: 'system',
-                    content: `Kullanıcı ile yapılan konuşmayı analiz et ve şu bilgileri kısa maddeler halinde özetle:
-- Kullanıcının adı (varsa)
-- Temel endişeleri ve sorunları
-- Kişilik özellikleri ve ruh hali
-- Lyra'nın bir dahaki seferde hatırlaması gereken önemli detaylar
-Maksimum 150 kelime.`
+                    content: `Kullanıcı ile yapılan konuşmayı analiz et ve şu bilgileri kısa maddeler halinde özetle:\n- Kullanıcının adı (varsa)\n- Temel endişeleri ve sorunları\n- Kişilik özellikleri ve ruh hali\n- Lyra'nın bir dahaki seferde hatırlaması gereken önemli detaylar\nMaksimum 150 kelime.`
                 },
                 { role: 'user', content: `Konuşma:\n${transcript}` }
             ],
@@ -155,42 +152,47 @@ Maksimum 150 kelime.`
         });
 
         const summary = summaryResponse.choices[0].message.content;
-        const allMemory = getPersistentMemory();
-        allMemory[userId] = summary;
-        savePersistentMemory(allMemory);
-        
+        await saveMemory(userId, summary);
         console.log(`[LOCAL MEMORY] ✅ Hafıza başarıyla kaydedildi!`);
         console.log(`[LOCAL MEMORY] Özet: ${summary.substring(0, 100)}...`);
     } catch (err) {
         console.error('[LOCAL MEMORY] ❌ Özetleme hatası:', err.message);
     }
+
+    res.sendStatus(200);
 });
 
-// ─── CUSTOM LLM ENDPOINT (VAPI İÇİN BEYİN) ────────────────
+// ─── CUSTOM LLM ENDPOINT (VAPI BEYİN) ─────────────────────
 app.post('/api/chat/completions', async (req, res) => {
     try {
         const { messages, model, temperature, max_tokens } = req.body;
         console.log(`[CUSTOM LLM] İstek alındı! Gelen mesaj sayısı: ${messages?.length}`);
 
-        // Vapi'den userId'yi çıkarmaya çalış
-        // 1. req.body.call.customer.number (varsa)
-        // 2. req.body.call.id
-        // 3. metadata.userId (bizim gönderdiğimiz)
-        const callData = req.body.call || {};
-        const userId = callData.customer?.number || callData.id || req.body.metadata?.userId || 'common_user';
-        
+        const userId = activeSessionUserId;
         console.log(`[CUSTOM LLM] Kullanıcı ID: ${userId}`);
-        
-        const latestEmotion = userEmotions.get(userId);
+
+        const userMemory = await getMemory(userId);
         const enrichedMessages = [...messages];
-        
+
+        const systemIdx = enrichedMessages.findIndex(m => m.role === 'system');
+        if (userMemory) {
+            const memoryInjection = `\n\n[BU KULLANICI HAKKINDAKİ HAFIZA]:\n${userMemory}\n\nBu bilgileri doğal şekilde kullan, asla "seni hatırlıyorum" diyerek açıkça belirtme.`;
+            if (systemIdx !== -1) {
+                enrichedMessages[systemIdx] = { ...enrichedMessages[systemIdx], content: enrichedMessages[systemIdx].content + memoryInjection };
+            } else {
+                enrichedMessages.unshift({ role: 'system', content: memoryInjection });
+            }
+            console.log(`[CUSTOM LLM] 🧠 Hafıza inject edildi! userId: ${userId}`);
+        }
+
+        const latestEmotion = userEmotions.get(userId);
         if (latestEmotion) {
             console.log(`[CUSTOM LLM] 🎭 Duygu Enjeksiyonu: ${latestEmotion.duygu} (%${latestEmotion.guven})`);
-            const systemIdx = enrichedMessages.findIndex(m => m.role === 'system');
-            if (systemIdx !== -1) {
-                enrichedMessages[systemIdx] = {
-                    ...enrichedMessages[systemIdx],
-                    content: enrichedMessages[systemIdx].content + `\n\n[GİZLİ DUYGU VERİSİ - Kamera Analizi]: Kullanıcı şu an ${latestEmotion.duygu} görünüyor (%${latestEmotion.guven} güven). Bu duyguyu cevaba doğal şekilde yansıt (örn: sakinse sen de sakin kal, çok korkmuşsa teselli et).`
+            const sysIdx = enrichedMessages.findIndex(m => m.role === 'system');
+            if (sysIdx !== -1) {
+                enrichedMessages[sysIdx] = {
+                    ...enrichedMessages[sysIdx],
+                    content: enrichedMessages[sysIdx].content + `\n\n[GİZLİ DUYGU VERİSİ - Kamera Analizi]: Kullanıcı şu an ${latestEmotion.duygu} görünüyor (%${latestEmotion.guven} güven). Bu duyguyu cevaba doğal şekilde yansıt (örn: sakinse sen de sakin kal, çok korkmuşsa teselli et).`
                 };
             }
         }
@@ -203,7 +205,6 @@ app.post('/api/chat/completions', async (req, res) => {
             max_tokens: max_tokens || 500,
         });
 
-        // Vapi'ye gerçek zamanlı (Server-Sent Events) aktarım
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -220,7 +221,7 @@ app.post('/api/chat/completions', async (req, res) => {
     }
 });
 
-// ─── YÜZDEN DUYGU ANALİZİ (GPT-4o Vision) ────────────────
+// ─── YÜZDEN DUYGU ANALİZİ (GPT-4o Vision) ─────────────────
 app.post('/analyze-emotion', async (req, res) => {
     try {
         const { imageBase64, userId } = req.body;
@@ -242,13 +243,12 @@ app.post('/analyze-emotion', async (req, res) => {
         try {
             const raw = response.choices[0].message.content.trim().replace(/```json|```/g, '');
             result = JSON.parse(raw);
-        } catch { /* parse hatası */ }
-        
-        // Son tespiti kaydet
+        } catch { }
+
         if (userId) {
             userEmotions.set(userId, { ...result, timestamp: Date.now() });
         }
-        
+
         console.log(`[DUYGU] ${userId || '?'}: ${result.duygu} %${result.guven}`);
         res.json(result);
     } catch (err) {
@@ -257,11 +257,11 @@ app.post('/analyze-emotion', async (req, res) => {
     }
 });
 
-// ─── SUNUCU BAŞLAT ────────────────────────────────────────
+// ─── SUNUCU BAŞLAT ─────────────────────────────────────────
 app.listen(port, () => {
     console.log('-------------------------------------------');
     console.log('🚀 Lyra Brain Sunucusu Çalışıyor!');
     console.log(`📍 Port: ${port}`);
-    console.log('🧠 Mimari: Vapi Native + Webhook Memory');
+    console.log('🧠 Mimari: Vapi + Supabase Memory + Auth');
     console.log('-------------------------------------------');
 });
