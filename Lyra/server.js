@@ -165,10 +165,11 @@ app.post('/save-local-memory', async (req, res) => {
 // ─── CUSTOM LLM ENDPOINT (VAPI BEYİN) ─────────────────────
 app.post('/api/chat/completions', async (req, res) => {
     try {
-        const { messages, model, temperature, max_tokens } = req.body;
+        const { messages, model, temperature, max_tokens, call } = req.body;
         console.log(`[CUSTOM LLM] İstek alındı! Gelen mesaj sayısı: ${messages?.length}`);
 
-        const userId = activeSessionUserId;
+        // Serverless ortamda activeSessionUserId güvenilmez — Vapi'nin call.assistantOverrides'ından al
+        const userId = call?.assistantOverrides?.variableValues?.userId || activeSessionUserId;
         console.log(`[CUSTOM LLM] Kullanıcı ID: ${userId}`);
 
         const userMemory = await getMemory(userId);

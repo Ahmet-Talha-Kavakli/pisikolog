@@ -1115,7 +1115,9 @@
                 body: JSON.stringify({ token: supabaseToken })
             });
 
-            vapiInstance.start(VAPI_ASSISTANT_ID);
+            vapiInstance.start(VAPI_ASSISTANT_ID, {
+                variableValues: { userId: persistentUserId }
+            });
         });
 
         vapiInstance.on('call-start', () => {
