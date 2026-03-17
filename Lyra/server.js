@@ -258,10 +258,15 @@ app.post('/analyze-emotion', async (req, res) => {
 });
 
 // ─── SUNUCU BAŞLAT ─────────────────────────────────────────
-app.listen(port, () => {
-    console.log('-------------------------------------------');
-    console.log('🚀 Lyra Brain Sunucusu Çalışıyor!');
-    console.log(`📍 Port: ${port}`);
-    console.log('🧠 Mimari: Vapi + Supabase Memory + Auth');
-    console.log('-------------------------------------------');
-});
+// Vercel serverless için app export ediliyor, lokal için listen
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL !== '1') {
+    app.listen(port, () => {
+        console.log('-------------------------------------------');
+        console.log('🚀 Lyra Brain Sunucusu Çalışıyor!');
+        console.log(`📍 Port: ${port}`);
+        console.log('🧠 Mimari: Vapi + Supabase Memory + Auth');
+        console.log('-------------------------------------------');
+    });
+}
+
+export default app;
