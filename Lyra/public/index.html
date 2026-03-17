@@ -1159,6 +1159,19 @@
         vapiInstance.on('volume-level', vol => { targetVolume = vol; });
 
         vapiInstance.on('message', (message) => {
+            // Vapi'nin end-of-call-report mesajından transcript al
+            if (message?.type === 'end-of-call-report' && message.transcript) {
+                console.log('[MEMORY] end-of-call-report alındı, transcript uzunluğu:', message.transcript.length);
+                if (message.transcript.length > 50 && persistentUserId) {
+                    fetch('/save-local-memory', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: persistentUserId, transcript: message.transcript })
+                    }).then(r => console.log('[MEMORY] Kaydedildi:', r.status))
+                      .catch(e => console.error('[MEMORY] Hata:', e));
+                }
+            }
+
             if (message?.type === 'transcript' && message.transcriptType === 'final') {
                 const text = message.transcript.toLowerCase();
                 fullConversation += (message.role || 'user') + ': ' + message.transcript + '\n';
