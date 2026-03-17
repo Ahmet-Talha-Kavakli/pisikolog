@@ -1139,14 +1139,20 @@
             targetVolume = 0;
             setCamera('normal', 2000);
 
+            console.log('[MEMORY] call-end fired. userId:', persistentUserId, 'transcript length:', fullConversation.length);
+            console.log('[MEMORY] transcript preview:', fullConversation.substring(0, 200));
+
             if (fullConversation.length > 50) {
                 try {
-                    await fetch('/save-local-memory', {
+                    const res = await fetch('/save-local-memory', {
                         method:'POST',
                         headers:{'Content-Type':'application/json'},
                         body: JSON.stringify({ userId: persistentUserId, transcript: fullConversation })
                     });
+                    console.log('[MEMORY] save response:', res.status);
                 } catch(e) { console.error("Memory save failed:", e); }
+            } else {
+                console.warn('[MEMORY] Transcript too short, not saving.');
             }
         });
 
