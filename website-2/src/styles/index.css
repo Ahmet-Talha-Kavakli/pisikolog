@@ -1,0 +1,1058 @@
+/* ============================================
+   LYRA CINEMATIC WEBSITE — GLOBAL STYLES
+   ============================================ */
+
+/* --- Reset & Base --- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  font-family: 'Inter', 'Space Grotesk', -apple-system, sans-serif;
+  background: #000000;
+  color: #f0f0f0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Canvas --- */
+#canvasContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+#canvasContainer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* --- Scroll Spacer --- */
+#scrollSpacer {
+  position: relative;
+  width: 100%;
+  height: 6000vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* --- Loading Screen --- */
+#loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at center, #0a0a1a 0%, #000000 100%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 1.2s ease;
+}
+
+#loader::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(124, 111, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 111, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+#loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(1.1);
+}
+
+.loader-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  position: relative;
+}
+
+.loader-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px solid rgba(124, 111, 255, 0.1);
+  border-top: 2px solid #7C6FFF;
+  border-bottom: 2px solid #A78BFA;
+  box-shadow: 0 0 30px rgba(124, 111, 255, 0.2);
+  animation: spin 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loader-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loader-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 24px;
+  color: #ffffff;
+  text-transform: uppercase;
+  background: linear-gradient(to right, #7C6FFF, #ffffff, #A78BFA);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(124, 111, 255, 0.4);
+  margin-right: -24px;
+}
+
+.loader-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(124, 111, 255, 0.7);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+.loader-bar {
+  width: 300px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: visible;
+  border-radius: 4px;
+}
+
+.loader-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: #7C6FFF;
+  box-shadow: 0 0 15px #7C6FFF;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.loader-percent {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 2px;
+  margin-top: 8px;
+}
+
+/* --- Audio Toggle --- */
+.audio-toggle {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.audio-toggle.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.audio-toggle:hover {
+  border-color: rgba(124, 111, 255, 0.5);
+  background: rgba(124, 111, 255, 0.1);
+  transform: scale(1.08);
+}
+
+.audio-toggle.playing {
+  animation: audioPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  border-color: rgba(124, 111, 255, 0.8);
+  box-shadow: 0 0 15px rgba(124, 111, 255, 0.4);
+}
+
+@keyframes audioPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(124, 111, 255, 0.7);
+  }
+}
+
+.audio-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* --- Scroll Progress Bar --- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  width: 0%;
+  background: linear-gradient(90deg, #7c22ff, #22d3ff);
+  box-shadow: 0 0 10px rgba(124, 34, 255, 0.8), 0 0 20px rgba(34, 211, 255, 0.5);
+  z-index: 100;
+  transition: width 0.05s linear;
+}
+
+/* --- Act Indicator --- */
+.act-indicator {
+  position: fixed;
+  left: 40px;
+  bottom: 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  z-index: 50;
+  padding: 8px 16px;
+  background: rgba(124, 111, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 111, 255, 0.3);
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(124, 111, 255, 0.5);
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.act-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(124, 111, 255, 0.2), transparent);
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 150%;
+  }
+}
+
+.act-indicator::before {
+  content: 'SYSTEM_STATUS // ONLINE';
+  position: absolute;
+  top: -15px;
+  left: 0;
+  font-size: 8px;
+  color: #7C6FFF;
+  letter-spacing: 1px;
+  opacity: 0.5;
+}
+
+/* --- Text Overlay --- */
+.text-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cinematic-text {
+  text-align: center;
+  max-width: 800px;
+  padding: 0 40px;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.cinematic-text h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(48px, 10vw, 120px);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  margin-bottom: 28px;
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.4) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 40px rgba(124, 111, 255, 0.3));
+}
+
+.cinematic-text p {
+  font-size: clamp(16px, 2.5vw, 28px);
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
+.cinematic-text.negative h1 {
+  background: linear-gradient(135deg, #ff3333 0%, #ff0000 50%, #8b0000 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 50px rgba(255, 0, 0, 0.4));
+}
+
+.cinematic-text.hope h1 {
+  background: linear-gradient(135deg, #ffffff 0%, #7C6FFF 40%, #A78BFA 70%, #C4B5FD 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 60px rgba(124, 111, 255, 0.5));
+}
+
+/* --- Interaction Hint --- */
+.interaction-hint {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+.hint-icon svg {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hint-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@keyframes hintPulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --- Phone Overlay (Act 9-10) --- */
+.phone-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.phone-frame {
+  width: 320px;
+  height: 640px;
+  background: linear-gradient(135deg, #050505 0%, #1a1a1a 100%);
+  border-radius: 44px;
+  border: 4px solid #3a3a3a;
+  box-shadow:
+    0 50px 100px -20px rgba(0, 0, 0, 0.8),
+    0 30px 60px -30px rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.8);
+  opacity: 0;
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.8s ease,
+    width 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.8s ease;
+}
+
+.phone-frame.visible {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.phone-frame.fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  transform: scale(1);
+}
+
+.phone-notch {
+  width: 120px;
+  height: 28px;
+  background: #000;
+  border-radius: 0 0 16px 16px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.phone-screen {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #000;
+  scrollbar-width: none;
+}
+
+.phone-screen::-webkit-scrollbar {
+  display: none;
+}
+
+.phone-home-bar {
+  width: 120px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin: 8px auto 12px;
+  flex-shrink: 0;
+}
+
+/* --- Instagram Mockup --- */
+.ig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ig-header-logo {
+  font-family: 'Space Grotesk', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ig-post {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ig-post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.ig-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+}
+
+.ig-username {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ig-post-image {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 48px;
+}
+
+.ig-actions {
+  display: flex;
+  gap: 14px;
+  padding: 10px 14px;
+}
+
+.ig-action-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ig-likes {
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ig-caption {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ig-comments-section {
+  padding: 8px 14px 16px;
+}
+
+.ig-comment {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: commentAppear 0.4s ease forwards;
+}
+
+.ig-comment .comment-user {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ig-comment .comment-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+.ig-comment.negative .comment-text {
+  color: #ff4d4d;
+  text-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+  animation: txtGlitch 0.2s infinite alternate;
+}
+
+@keyframes txtGlitch {
+  0% {
+    transform: translate(0);
+    text-shadow: -2px 0 red, 2px 0 blue;
+  }
+
+  25% {
+    transform: translate(1px, -1px);
+  }
+
+  50% {
+    transform: translate(-1px, 1px);
+    text-shadow: 2px 0 red, -2px 0 blue;
+  }
+
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes commentAppear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Lyra Ad in Instagram --- */
+.ig-ad {
+  border: 1px solid rgba(124, 111, 255, 0.2);
+  background: linear-gradient(135deg, rgba(124, 111, 255, 0.05), rgba(167, 139, 250, 0.05));
+  border-radius: 12px;
+  margin: 12px 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ig-ad:hover {
+  border-color: rgba(124, 111, 255, 0.8);
+  background: linear-gradient(135deg, rgba(124, 111, 255, 0.15), rgba(167, 139, 250, 0.15));
+  box-shadow: 0 0 20px rgba(124, 111, 255, 0.2);
+}
+
+.ig-ad-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.ig-ad-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #A78BFA;
+  margin-bottom: 4px;
+}
+
+.ig-ad-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+.ig-ad-cta {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #7C6FFF, #A78BFA);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* --- App Store Mockup --- */
+.appstore-screen {
+  background: #000;
+  min-height: 100%;
+  padding: 16px;
+}
+
+.appstore-search {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.appstore-search-icon {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 14px;
+}
+
+.appstore-search-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.appstore-app {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.appstore-app-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7C6FFF, #A78BFA);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.appstore-app-info {
+  flex: 1;
+}
+
+.appstore-app-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.appstore-app-category {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 6px;
+}
+
+.appstore-app-rating {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.appstore-get-btn {
+  padding: 6px 20px;
+  background: rgba(124, 111, 255, 0.2);
+  border: none;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #A78BFA;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.appstore-get-btn:hover {
+  background: rgba(124, 111, 255, 0.3);
+}
+
+.appstore-get-btn.downloading {
+  position: relative;
+  color: transparent;
+}
+
+.appstore-get-btn.downloading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(167, 139, 250, 0.3);
+  border-top-color: #A78BFA;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.appstore-get-btn.open {
+  background: linear-gradient(135deg, #7C6FFF, #A78BFA, #7C6FFF);
+  background-size: 200% 100%;
+  animation: flowBG 3s linear infinite;
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(124, 111, 255, 0.4);
+}
+
+@keyframes flowBG {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* --- Cinematic Text --- */
+.cinematic-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 200;
+  pointer-events: none;
+  width: 90%;
+  max-width: 1000px;
+}
+
+.cinematic-text h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(48px, 10vw, 120px);
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  background: linear-gradient(to bottom, #fff 0%, #aaa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(124, 111, 255, 0.4));
+  line-height: 1.1;
+}
+
+.cinematic-text p {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(14px, 2vw, 20px);
+  font-weight: 300;
+  letter-spacing: 0.6em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 20px;
+  text-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
+}
+
+/* --- Scroll Indicator --- */
+.scroll-indicator {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fadeIn 1s ease 2s forwards;
+}
+
+.scroll-indicator-text {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-indicator-arrow {
+  width: 20px;
+  height: 20px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.3);
+  transform: rotate(45deg);
+  animation: scrollArrow 1.5s ease-in-out infinite;
+}
+
+@keyframes scrollArrow {
+
+  0%,
+  100% {
+    transform: rotate(45deg) translateY(0);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: rotate(45deg) translateY(6px);
+    opacity: 0.8;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .phone-frame {
+    width: 260px;
+    height: 520px;
+    border-radius: 30px;
+  }
+
+  .act-indicator {
+    left: 16px;
+    bottom: 16px;
+    font-size: 9px;
+  }
+
+  .audio-toggle {
+    bottom: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* --- Cinematic HUD (Act 9-10) --- */
+.hud-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.hud-overlay.visible {
+  opacity: 1;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-color: rgba(124, 111, 255, 0.8);
+  border-style: solid;
+  box-shadow: inset 0 0 10px rgba(124, 111, 255, 0.2);
+}
+
+.top-left {
+  top: 40px;
+  left: 40px;
+  border-width: 2px 0 0 2px;
+}
+
+.top-right {
+  top: 40px;
+  right: 40px;
+  border-width: 2px 2px 0 0;
+}
+
+.bottom-left {
+  bottom: 40px;
+  left: 40px;
+  border-width: 0 0 2px 2px;
+}
+
+.bottom-right {
+  bottom: 40px;
+  right: 40px;
+  border-width: 0 2px 2px 0;
+}
+
+.hud-scanner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(124, 111, 255, 0.3), transparent);
+  animation: hudScanner 4s linear infinite;
+  box-shadow: 0 0 15px rgba(124, 111, 255, 0.5);
+}
+
+@keyframes hudScanner {
+  0% {
+    top: -10%;
+  }
+
+  100% {
+    top: 110%;
+  }
+}
+
+.hud-system-data {
+  position: absolute;
+  top: 100px;
+  right: 60px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 10px;
+  color: rgba(124, 111, 255, 0.6);
+  text-align: right;
+  letter-spacing: 2px;
+}
+
+.data-row {
+  margin-bottom: 4px;
+  animation: hudFlicker 0.1s step-end infinite alternate;
+}
+
+@keyframes hudFlicker {
+  0% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* --- Neural Connect Button --- */
+.neural-connect-btn {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 16px 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(124, 111, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(124, 111, 255, 0.3);
+  border-radius: 100px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 30px rgba(124, 111, 255, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.neural-connect-btn.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.neural-connect-btn:hover {
+  background: rgba(124, 111, 255, 0.2);
+  border-color: rgba(124, 111, 255, 0.8);
+  box-shadow: 0 0 50px rgba(124, 111, 255, 0.5);
+  transform: translateX(-50%) translateY(-5px) scale(1.05);
+}
+
+.neural-connect-btn.active {
+  background: linear-gradient(135deg, rgba(124, 111, 255, 0.4), rgba(34, 211, 255, 0.4));
+  border-color: #22d3ff;
+  box-shadow: 0 0 60px rgba(34, 211, 255, 0.6);
+  animation: neonPulse 2s infinite alternate;
+}
+
+@keyframes neonPulse {
+  from { box-shadow: 0 0 40px rgba(124, 111, 255, 0.4); }
+  to { box-shadow: 0 0 80px rgba(34, 211, 255, 0.8); }
+}
